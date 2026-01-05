@@ -2,12 +2,11 @@ import { Request, Response } from 'express';
 import * as models from '../models';
 import * as enums from '../constants/enums';
 import RefreshToken from '../models/RefreshToken';
-import { createOTP, verifyOTP } from '../services/otpService';
+import { createOTP, verifyOTP, resendOTPService } from '../services/otpService';
 import { sendOTP, generateTokens } from '../services/authService';
 import { sendMail } from '../services/mailService';
 import logger from '../utils/logger';
 import jwt from 'jsonwebtoken';
-import { modelNames } from 'mongoose';
 
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh_secret';
 
@@ -30,7 +29,7 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
 
-    const otp = await createOTP(email);
+    const otp = await createOTP(email, 'signup');
 
     await sendMail({
       to: email,
@@ -96,36 +95,63 @@ export const requestOtp = async (req: Request, res: Response) => {
 
 export const verifyOtp = async (req: Request, res: Response) => {
   try {
-    console.log(req.body.code);
     const { code, method, identifier, purpose } = req.body;
 
-    const isValid = await verifyOTP(identifier, code);
-    if (!isValid) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    if (!code || !identifier || !purpose || !method) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const result = await verifyOTP(
+      identifier,
+      code,
+      purpose, // <-- now passed to service
+    );
+
+    if (!result.success) {
+      switch (result.reason) {
+        case 'too_many_attempts':
+          return res.status(429).json({ message: 'Too many incorrect attempts' });
+
+        case 'invalid_otp':
+          return res.status(400).json({ message: 'Invalid OTP' });
+
+        case 'not_found_or_expired':
+        default:
+          return res.status(410).json({ message: 'OTP expired or not found' });
+      }
+    }
+
+    // OTP is valid — now continue flow
     let user = await models.UserModel.findOne({ [method]: identifier });
 
+    /**
+     * --- SIGNUP FLOW ---
+     */
     if (purpose === 'signup') {
-      if (!user) return res.status(400).json({ message: 'User not found for signup verification' });
+      if (!user) {
+        return res.status(400).json({ message: 'User not found for signup verification' });
+      }
+
       user.isVerified = true;
       await user.save();
-    } else if (purpose === 'login') {
-      if (!user) return res.status(400).json({ message: 'User not found' });
-    } else if (purpose === 'reset') {
-      // Return a temporary token to allow password reset?
-      // Or just return success and client sends new password with this same OTP?
-      // Requirement: "allow set new password after verify"
-      // Usually we'd return a reset token. For now, let's just return success.
-      return res.status(200).json({ message: 'OTP verified, proceed to reset password' });
     }
 
+    /**
+     * --- LOGIN FLOW ---
+     */
+    if (purpose === 'login') {
+      if (!user) {
+        // don't leak existence — but here user MUST exist to log in
+        return res.status(404).json({ message: 'User not found' });
+      }
+    }
+
+    // Generate login tokens after successful signup/login verification
     const tokens = await generateTokens(user!);
 
-    // Check if profile is complete (simple check)
     const nextStep = user?.onboardingStatus !== 'COMPLETED' ? 'onboarding' : 'home';
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Verification successful',
       ...tokens,
       user: {
@@ -136,8 +162,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
       next: nextStep,
     });
   } catch (error) {
-    logger.error('Verify OTP error:', error);
-    res.status(500).json({ message: 'Server error' });
+    logger.error('Verify OTP controller error:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -159,7 +185,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // ✅ Create OTP for login
-    const otp = await createOTP(identifier);
+    const otp = await createOTP(identifier, 'login');
 
     // ✅ Send OTP
     if (method === 'email') {
@@ -223,7 +249,54 @@ export const refreshToken = async (req: Request, res: Response) => {
     res.status(401).json({ message: 'Invalid refresh token' });
   }
 };
+export const resendOtp = async (req: Request, res: Response) => {
+  try {
+    const { identifier, purpose, method } = req.body;
 
+    if (!identifier || !purpose || !method) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const result = await resendOTPService(identifier, purpose);
+
+    if (!result.success) {
+      switch (result.reason) {
+        case 'cooldown':
+          return res.status(429).json({
+            message: 'Please wait before requesting another OTP',
+          });
+
+        case 'limit_reached':
+          return res.status(429).json({
+            message: 'Maximum resend limit reached',
+          });
+      }
+    }
+    if (method === 'email') {
+      await sendMail({
+        to: identifier,
+        subject: 'Login OTP',
+        html: `
+          <div style="font-family: Arial, sans-serif">
+            <h2>${purpose == 'login' ? 'Login' : 'Signup'} Verification</h2>
+            <p>Your OTP is:</p>
+            <h1 style="letter-spacing: 5px">${result.otp}</h1>
+            <p>This OTP is valid for <b>5 minutes</b>.</p>
+          </div>
+        `,
+      });
+    }
+    // TODO: send via email/SMS here
+    // sendOTP(identifier, result.otp, method);
+
+    return res.status(200).json({
+      message: result.reused ? 'OTP resent' : 'New OTP generated',
+    });
+  } catch (err) {
+    logger.error('Resend OTP error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
 export const logout = async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body;

@@ -13,6 +13,7 @@ export interface IUser {
   dob?: Date;
   email?: string;
   phone?: string;
+  salutation?: 'MR' | 'MS' | 'MRS' | 'MX' | 'OTHER' | null;
   onboardingStatus: OnboardingStatus;
   isVerified: boolean;
 }
@@ -31,11 +32,11 @@ const UserSchema = new mongoose.Schema<IUser>(
       trim: true,
     },
 
-    nickName: {
+    salutation: {
       type: String,
-      trim: true,
+      enum: ['MR', 'MS', 'MRS', 'MX', 'OTHER'],
+      default: null,
     },
-
     dob: {
       type: Date,
     },

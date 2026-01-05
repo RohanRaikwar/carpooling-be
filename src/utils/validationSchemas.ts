@@ -23,11 +23,7 @@ export const updateProfileSchemaOnBoarding = z.object({
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must be at most 50 characters'),
 
-  nickName: z
-    .string()
-    .min(2, 'Nick name must be at least 2 characters')
-    .max(30, 'Nick name must be at most 30 characters')
-    .optional(),
+  salutation: z.enum(['MR', 'MS', 'MRS', 'MX', 'OTHER']).optional(),
 
   dob: z
     .string()

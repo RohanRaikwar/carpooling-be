@@ -19,7 +19,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user.id;
-    const { name, nickName, dob } = req.body;
+    const { name, salutation, dob } = req.body;
     console.log('user before update:', userId);
     const user = await Models.UserModel.findOne({ uuid: userId });
     if (!user) {
@@ -27,7 +27,7 @@ export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) =
     }
 
     user.name = name;
-    user.nickName = nickName;
+    user.salutation = salutation;
     user.dob = new Date(dob);
     user.onboardingStatus = enums.OnboardingStatus.COMPLETED;
     await user.save();
