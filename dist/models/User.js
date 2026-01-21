@@ -22,9 +22,10 @@ const UserSchema = new mongoose_1.default.Schema({
         type: String,
         trim: true,
     },
-    nickName: {
+    salutation: {
         type: String,
-        trim: true,
+        enum: ['MR', 'MS', 'MRS', 'MX', 'OTHER'],
+        default: null,
     },
     dob: {
         type: Date,

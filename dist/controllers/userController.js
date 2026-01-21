@@ -54,14 +54,14 @@ exports.getMe = getMe;
 const completeOnBoardingStep1 = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { name, nickName, dob } = req.body;
+        const { name, salutation, dob } = req.body;
         console.log('user before update:', userId);
         const user = await Models.UserModel.findOne({ uuid: userId });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         user.name = name;
-        user.nickName = nickName;
+        user.salutation = salutation;
         user.dob = new Date(dob);
         user.onboardingStatus = enums.OnboardingStatus.COMPLETED;
         await user.save();

@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const travelPreference_controller_1 = require("./travelPreference.controller");
+const validate_1 = require("../../middleware/validate");
+const travelPreference_validator_1 = require("./travelPreference.validator");
+const router = (0, express_1.Router)();
+router.put('/', (0, validate_1.validate)({ body: travelPreference_validator_1.travelPreferenceSchema }), travelPreference_controller_1.saveTravelPreference);
+router.get('/', travelPreference_controller_1.getTravelPreference);
+exports.default = router;

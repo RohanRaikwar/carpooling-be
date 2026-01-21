@@ -7,6 +7,7 @@ import { sendOTP, generateTokens } from '../services/authService';
 import { sendMail } from '../services/mailService';
 import logger from '../utils/logger';
 import jwt from 'jsonwebtoken';
+import { log } from 'node:console';
 
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh_secret';
 
@@ -170,6 +171,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { method, identifier } = req.body;
+    console.log('kbjv');
 
     if (method !== 'email' && method !== 'phone') {
       return res.status(400).json({ message: 'Invalid login request' });

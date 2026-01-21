@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.refreshToken = exports.login = exports.verifyOtp = exports.requestOtp = exports.signup = void 0;
+exports.logout = exports.resendOtp = exports.refreshToken = exports.login = exports.verifyOtp = exports.requestOtp = exports.signup = void 0;
 const models = __importStar(require("../models"));
 const RefreshToken_1 = __importDefault(require("../models/RefreshToken"));
 const otpService_1 = require("../services/otpService");
@@ -61,7 +61,7 @@ const signup = async (req, res) => {
                 isVerified: false,
             });
         }
-        const otp = await (0, otpService_1.createOTP)(email);
+        const otp = await (0, otpService_1.createOTP)(email, 'signup');
         await (0, mailService_1.sendMail)({
             to: email,
             subject: 'Your Signup OTP',
@@ -120,34 +120,47 @@ const requestOtp = async (req, res) => {
 exports.requestOtp = requestOtp;
 const verifyOtp = async (req, res) => {
     try {
-        console.log(req.body.code);
         const { code, method, identifier, purpose } = req.body;
-        const isValid = await (0, otpService_1.verifyOTP)(identifier, code);
-        if (!isValid) {
-            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        if (!code || !identifier || !purpose || !method) {
+            return res.status(400).json({ message: 'Missing required fields' });
         }
+        const result = await (0, otpService_1.verifyOTP)(identifier, code, purpose);
+        if (!result.success) {
+            switch (result.reason) {
+                case 'too_many_attempts':
+                    return res.status(429).json({ message: 'Too many incorrect attempts' });
+                case 'invalid_otp':
+                    return res.status(400).json({ message: 'Invalid OTP' });
+                case 'not_found_or_expired':
+                default:
+                    return res.status(410).json({ message: 'OTP expired or not found' });
+            }
+        }
+        // OTP is valid — now continue flow
         let user = await models.UserModel.findOne({ [method]: identifier });
+        /**
+         * --- SIGNUP FLOW ---
+         */
         if (purpose === 'signup') {
-            if (!user)
+            if (!user) {
                 return res.status(400).json({ message: 'User not found for signup verification' });
+            }
             user.isVerified = true;
             await user.save();
         }
-        else if (purpose === 'login') {
-            if (!user)
-                return res.status(400).json({ message: 'User not found' });
+        /**
+         * --- LOGIN FLOW ---
+         */
+        if (purpose === 'login') {
+            if (!user) {
+                // don't leak existence — but here user MUST exist to log in
+                return res.status(404).json({ message: 'User not found' });
+            }
         }
-        else if (purpose === 'reset') {
-            // Return a temporary token to allow password reset?
-            // Or just return success and client sends new password with this same OTP?
-            // Requirement: "allow set new password after verify"
-            // Usually we'd return a reset token. For now, let's just return success.
-            return res.status(200).json({ message: 'OTP verified, proceed to reset password' });
-        }
+        // Generate login tokens after successful signup/login verification
         const tokens = await (0, authService_1.generateTokens)(user);
-        // Check if profile is complete (simple check)
         const nextStep = user?.onboardingStatus !== 'COMPLETED' ? 'onboarding' : 'home';
-        res.status(200).json({
+        return res.status(200).json({
             message: 'Verification successful',
             ...tokens,
             user: {
@@ -159,14 +172,15 @@ const verifyOtp = async (req, res) => {
         });
     }
     catch (error) {
-        logger_1.default.error('Verify OTP error:', error);
-        res.status(500).json({ message: 'Server error' });
+        logger_1.default.error('Verify OTP controller error:', error);
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 exports.verifyOtp = verifyOtp;
 const login = async (req, res) => {
     try {
         const { method, identifier } = req.body;
+        console.log('kbjv');
         if (method !== 'email' && method !== 'phone') {
             return res.status(400).json({ message: 'Invalid login request' });
         }
@@ -178,7 +192,7 @@ const login = async (req, res) => {
             return res.status(403).json({ message: 'User not verified' });
         }
         // ✅ Create OTP for login
-        const otp = await (0, otpService_1.createOTP)(identifier);
+        const otp = await (0, otpService_1.createOTP)(identifier, 'login');
         // ✅ Send OTP
         if (method === 'email') {
             await (0, mailService_1.sendMail)({
@@ -238,6 +252,51 @@ const refreshToken = async (req, res) => {
     }
 };
 exports.refreshToken = refreshToken;
+const resendOtp = async (req, res) => {
+    try {
+        const { identifier, purpose, method } = req.body;
+        if (!identifier || !purpose || !method) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+        const result = await (0, otpService_1.resendOTPService)(identifier, purpose);
+        if (!result.success) {
+            switch (result.reason) {
+                case 'cooldown':
+                    return res.status(429).json({
+                        message: 'Please wait before requesting another OTP',
+                    });
+                case 'limit_reached':
+                    return res.status(429).json({
+                        message: 'Maximum resend limit reached',
+                    });
+            }
+        }
+        if (method === 'email') {
+            await (0, mailService_1.sendMail)({
+                to: identifier,
+                subject: 'Login OTP',
+                html: `
+          <div style="font-family: Arial, sans-serif">
+            <h2>${purpose == 'login' ? 'Login' : 'Signup'} Verification</h2>
+            <p>Your OTP is:</p>
+            <h1 style="letter-spacing: 5px">${result.otp}</h1>
+            <p>This OTP is valid for <b>5 minutes</b>.</p>
+          </div>
+        `,
+            });
+        }
+        // TODO: send via email/SMS here
+        // sendOTP(identifier, result.otp, method);
+        return res.status(200).json({
+            message: result.reused ? 'OTP resent' : 'New OTP generated',
+        });
+    }
+    catch (err) {
+        logger_1.default.error('Resend OTP error:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.resendOtp = resendOtp;
 const logout = async (req, res) => {
     try {
         const { refreshToken } = req.body;

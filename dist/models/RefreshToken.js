@@ -35,9 +35,25 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const refreshTokenSchema = new mongoose_1.Schema({
-    userId: { type: String, ref: 'User', required: true },
-    token: { type: String, required: true, index: true },
-    expiresAt: { type: Date, required: true },
-    revoked: { type: Boolean, default: false },
+    userId: {
+        type: String,
+        ref: 'User',
+        required: true,
+        index: true,
+    },
+    token: {
+        type: String,
+        required: true,
+        unique: true, // better than index:true
+    },
+    expiresAt: {
+        type: Date,
+        required: true,
+    },
+    revoked: {
+        type: Boolean,
+        default: false,
+    },
 }, { timestamps: true });
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 exports.default = mongoose_1.default.model('RefreshToken', refreshTokenSchema);

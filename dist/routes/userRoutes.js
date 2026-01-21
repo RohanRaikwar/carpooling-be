@@ -43,6 +43,6 @@ const validate_1 = require("../middleware/validate");
 const schemas = __importStar(require("../utils/validationSchemas"));
 const router = express_1.default.Router();
 router.get('/me', userController.getMe);
-router.put('/me/profile', authMiddleware_1.protect, (0, validate_1.validate)(schemas.updateProfileSchema), userController.updateProfile);
-router.post('/me/profile/onboarding/1', (0, validate_1.validate)(schemas.updateProfileSchemaOnBoarding), userController.completeOnBoardingStep1);
+router.put('/me/profile', authMiddleware_1.protect, (0, validate_1.validate)({ body: schemas.updateProfileSchema }), userController.updateProfile);
+router.post('/me/profile/onboarding/1', (0, validate_1.validate)({ body: schemas.updateProfileSchemaOnBoarding }), userController.completeOnBoardingStep1);
 exports.default = router;

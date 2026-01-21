@@ -32,20 +32,26 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const authController = __importStar(require("../controllers/authController"));
-const validate_1 = require("../middleware/validate");
-const schemas = __importStar(require("../utils/validationSchemas"));
-const router = express_1.default.Router();
-router.post('/signup', (0, validate_1.validate)({ body: schemas.signupSchema }), authController.signup);
-router.post('/otp/request', (0, validate_1.validate)({ body: schemas.otpRequestSchema }), authController.requestOtp);
-router.post('/otp/resend', (0, validate_1.validate)({ body: schemas.otpRequestSchema }), authController.resendOtp);
-router.post('/otp/verify', (0, validate_1.validate)({ body: schemas.otpVerifySchema }), authController.verifyOtp);
-router.post('/login', (0, validate_1.validate)({ body: schemas.loginSchema }), authController.login);
-router.post('/refresh', (0, validate_1.validate)({ body: schemas.refreshTokenSchema }), authController.refreshToken);
-router.post('/logout', authController.logout);
-exports.default = router;
+exports.VehicleModel = void 0;
+const mongoose_1 = __importStar(require("mongoose"));
+const uuid_1 = require("uuid");
+const vehicleSchema = new mongoose_1.Schema({
+    uuid: { type: String, default: () => (0, uuid_1.v4)(), unique: true },
+    userId: { type: String, required: true, index: true },
+    licenseCountry: { type: String, required: true },
+    licenseNumber: { type: String, required: true },
+    brand: String,
+    vehicleModel: String,
+    type: {
+        type: String,
+        enum: ['sedan', 'hatchback', 'minibus'],
+    },
+    color: String,
+    year: Number,
+    imageUrl: String,
+    deletedAt: { type: Date, default: null },
+}, { timestamps: true });
+// Automatically ignore soft-deleted records
+vehicleSchema.index({ userId: 1, deletedAt: 1 });
+exports.VehicleModel = mongoose_1.default.model('Vehicle', vehicleSchema);

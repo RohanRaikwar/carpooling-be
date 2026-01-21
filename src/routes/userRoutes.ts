@@ -10,12 +10,12 @@ router.get('/me', userController.getMe as unknown as express.RequestHandler);
 router.put(
   '/me/profile',
   protect,
-  validate(schemas.updateProfileSchema),
+  validate({ body: schemas.updateProfileSchema }),
   userController.updateProfile as unknown as express.RequestHandler,
 );
 router.post(
   '/me/profile/onboarding/1',
-  validate(schemas.updateProfileSchemaOnBoarding),
+  validate({ body: schemas.updateProfileSchemaOnBoarding }),
   userController.completeOnBoardingStep1 as unknown as express.RequestHandler,
 );
 

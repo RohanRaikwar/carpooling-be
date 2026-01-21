@@ -2,14 +2,27 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validate = void 0;
 const zod_1 = require("zod");
-const validate = (schema) => async (req, res, next) => {
+const validate = (schemas) => (req, res, next) => {
     try {
-        await schema.parseAsync(req.body);
+        if (schemas.body) {
+            schemas.body.parse(req.body); // works for JSON & form-data
+        }
+        if (schemas.params) {
+            schemas.params.parse(req.params);
+        }
+        if (schemas.query) {
+            schemas.query.parse(req.query);
+        }
+        if (schemas.file) {
+            console.log(req.file);
+            schemas.file.parse(req.file); // multer single file
+        }
         next();
     }
     catch (error) {
         if (error instanceof zod_1.ZodError) {
             return res.status(400).json({
+                success: false,
                 message: 'Validation failed',
                 errors: error.issues.map((e) => ({
                     field: e.path.join('.'),

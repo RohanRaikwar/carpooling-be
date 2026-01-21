@@ -42,6 +42,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const rideRoutes_1 = __importDefault(require("./routes/rideRoutes"));
+const vehicle_routes_1 = __importDefault(require("./modules/vehicles/vehicle.routes"));
+const travelPreference_routes_1 = __importDefault(require("./modules/travel-preferences/travelPreference.routes"));
 const database_1 = __importDefault(require("./config/database"));
 const middleware = __importStar(require("./middleware"));
 const app = (0, express_1.default)();
@@ -56,4 +58,6 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes_1.default);
 app.use('/api/v1/users', middleware.protect, userRoutes_1.default);
 app.use('/api/v1/rides', rideRoutes_1.default);
+app.use('/api/v1/vehicles', middleware.protect, vehicle_routes_1.default);
+app.use('/api/v1/travel-preferences', middleware.protect, travelPreference_routes_1.default);
 exports.default = app;
