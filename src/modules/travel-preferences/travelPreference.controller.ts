@@ -1,10 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
-import { TravelPreference } from './travelPreference.model';
-import { AuthRequest } from '../../middleware/authMiddleware';
+import { Response, NextFunction } from 'express';
+import { TravelPreference } from '@models/travelPreference.model';
+import { AuthRequest } from '../../types/auth';
+import { sendSuccess, sendError, HttpStatus } from '@utils';
 
+/**
+ * Save or update travel preference
+ */
 export const saveTravelPreference = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user.id; // assuming Auth middleware
+    const userId = req.user.id;
     const { chattiness, pets } = req.body;
 
     const preference = await TravelPreference.findOneAndUpdate(
@@ -13,16 +17,23 @@ export const saveTravelPreference = async (req: AuthRequest, res: Response, next
       { upsert: true, new: true },
     );
 
-    res.status(200).json({
-      success: true,
+    return sendSuccess(res, {
+      status: HttpStatus.OK,
       message: 'Travel preference saved successfully',
       data: preference,
     });
   } catch (error) {
-    next(error);
+    return sendError(res, {
+      status: HttpStatus.INTERNAL_ERROR,
+      message: 'Failed to save travel preference',
+      error,
+    });
   }
 };
 
+/**
+ * Get travel preference
+ */
 export const getTravelPreference = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user.id;
@@ -30,14 +41,22 @@ export const getTravelPreference = async (req: AuthRequest, res: Response, next:
     const preference = await TravelPreference.findOne({ userId });
 
     if (!preference) {
-      return res.status(404).json({
-        success: false,
+      return sendError(res, {
+        status: HttpStatus.NOT_FOUND,
         message: 'Travel preference not found',
       });
     }
 
-    res.json({ success: true, data: preference });
+    return sendSuccess(res, {
+      status: HttpStatus.OK,
+      message: 'Travel preference fetched successfully',
+      data: preference,
+    });
   } catch (error) {
-    next(error);
+    return sendError(res, {
+      status: HttpStatus.INTERNAL_ERROR,
+      message: 'Failed to fetch travel preference',
+      error,
+    });
   }
 };

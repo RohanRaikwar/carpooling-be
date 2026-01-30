@@ -35,80 +35,107 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteVehicle = exports.getVehicle = exports.uploadImage = exports.updateYear = exports.updateColor = exports.updateType = exports.updateBrandModel = exports.createVehicle = void 0;
 const VehicleService = __importStar(require("./vehicle.service"));
+const _utils_1 = require("@utils");
 /* ================= CREATE VEHICLE ================= */
 const createVehicle = async (req, res, next) => {
     try {
         const { licenseCountry, licenseNumber } = req.body;
         const vehicle = await VehicleService.createVehicle(req.user.id, licenseCountry, licenseNumber);
-        res.status(201).json({
-            success: true,
+        return (0, _utils_1.sendSuccess)(res, {
+            status: _utils_1.HttpStatus.CREATED,
+            message: 'Vehicle created successfully',
             data: { vehicleId: vehicle.uuid },
         });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            status: _utils_1.HttpStatus.INTERNAL_ERROR,
+            message: 'Failed to create vehicle',
+            error,
+        });
     }
 };
 exports.createVehicle = createVehicle;
 /* ================= UPDATE BRAND & MODEL ================= */
-const updateBrandModel = async (req, res, next) => {
+const updateBrandModel = async (req, res) => {
     try {
         await VehicleService.updateVehicle(req.user.id, req.params.id, {
             brand: req.body.brand,
             model: req.body.model,
         });
-        res.json({ success: true, vehicleId: req.params.id });
+        return (0, _utils_1.sendSuccess)(res, {
+            message: 'Vehicle brand and model updated',
+            data: { vehicleId: req.params.id },
+        });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to update brand and model',
+            error,
+        });
     }
 };
 exports.updateBrandModel = updateBrandModel;
 /* ================= UPDATE TYPE ================= */
-const updateType = async (req, res, next) => {
+const updateType = async (req, res) => {
     try {
         await VehicleService.updateVehicle(req.user.id, req.params.id, {
             type: req.body.type,
         });
-        res.json({ success: true });
+        return (0, _utils_1.sendSuccess)(res, {
+            message: 'Vehicle type updated',
+        });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to update vehicle type',
+            error,
+        });
     }
 };
 exports.updateType = updateType;
 /* ================= UPDATE COLOR ================= */
-const updateColor = async (req, res, next) => {
+const updateColor = async (req, res) => {
     try {
         await VehicleService.updateVehicle(req.user.id, req.params.id, {
             color: req.body.color,
         });
-        res.json({ success: true });
+        return (0, _utils_1.sendSuccess)(res, {
+            message: 'Vehicle color updated',
+        });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to update vehicle color',
+            error,
+        });
     }
 };
 exports.updateColor = updateColor;
 /* ================= UPDATE YEAR ================= */
-const updateYear = async (req, res, next) => {
+const updateYear = async (req, res) => {
     try {
         await VehicleService.updateVehicle(req.user.id, req.params.id, {
             year: req.body.year,
         });
-        res.json({ success: true });
+        return (0, _utils_1.sendSuccess)(res, {
+            message: 'Vehicle year updated',
+        });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to update vehicle year',
+            error,
+        });
     }
 };
 exports.updateYear = updateYear;
 /* ================= UPLOAD IMAGE ================= */
-const uploadImage = async (req, res, next) => {
+const uploadImage = async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({
-                success: false,
+            return (0, _utils_1.sendError)(res, {
+                status: _utils_1.HttpStatus.BAD_REQUEST,
                 message: 'Image file required',
             });
         }
@@ -116,44 +143,54 @@ const uploadImage = async (req, res, next) => {
         await VehicleService.updateVehicle(req.user.id, req.params.id, {
             imageUrl,
         });
-        res.json({ success: true });
+        return (0, _utils_1.sendSuccess)(res, {
+            message: 'Vehicle image uploaded successfully',
+        });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to upload vehicle image',
+            error,
+        });
     }
 };
 exports.uploadImage = uploadImage;
 /* ================= GET VEHICLE ================= */
-const getVehicle = async (req, res, next) => {
+const getVehicle = async (req, res) => {
     try {
         const vehicle = await VehicleService.getVehicle(req.user.id, req.params.id);
         if (!vehicle) {
-            return res.status(404).json({
-                success: false,
+            return (0, _utils_1.sendError)(res, {
+                status: _utils_1.HttpStatus.NOT_FOUND,
                 message: 'Vehicle not found',
             });
         }
-        res.status(200).json({
-            success: true,
+        return (0, _utils_1.sendSuccess)(res, {
+            message: 'Vehicle fetched successfully',
             data: vehicle,
         });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to fetch vehicle',
+            error,
+        });
     }
 };
 exports.getVehicle = getVehicle;
-/* ================= DELETE VEHICLE (SOFT DELETE) ================= */
-const deleteVehicle = async (req, res, next) => {
+/* ================= DELETE VEHICLE ================= */
+const deleteVehicle = async (req, res) => {
     try {
         await VehicleService.deleteVehicle(req.user.id, req.params.id);
-        res.json({
-            success: true,
+        return (0, _utils_1.sendSuccess)(res, {
             message: 'Vehicle deleted successfully',
         });
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        return (0, _utils_1.sendError)(res, {
+            message: 'Failed to delete vehicle',
+            error,
+        });
     }
 };
 exports.deleteVehicle = deleteVehicle;

@@ -23,11 +23,8 @@ exports.updateProfileSchemaOnBoarding = zod_1.z.object({
         .string()
         .min(2, 'Name must be at least 2 characters')
         .max(50, 'Name must be at most 50 characters'),
-    salutation: zod_1.z.enum(['MR', 'MS', 'MRS', 'MX', 'OTHER']).optional(),
-    dob: zod_1.z
-        .string()
-        .refine((val) => !isNaN(Date.parse(val)), 'Date of birth must be a valid date')
-        .optional(),
+    salutation: zod_1.z.enum(['MR', 'MS', 'MRS', 'MX', 'OTHER']),
+    dob: zod_1.z.string().refine((val) => !isNaN(Date.parse(val)), 'Date of birth must be a valid date'),
 });
 exports.otpRequestSchema = zod_1.z.object({
     method: zod_1.z.enum(['email', 'phone']),

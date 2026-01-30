@@ -23,12 +23,9 @@ export const updateProfileSchemaOnBoarding = z.object({
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must be at most 50 characters'),
 
-  salutation: z.enum(['MR', 'MS', 'MRS', 'MX', 'OTHER']).optional(),
+  salutation: z.enum(['MR', 'MS', 'MRS', 'MX', 'OTHER']),
 
-  dob: z
-    .string()
-    .refine((val) => !isNaN(Date.parse(val)), 'Date of birth must be a valid date')
-    .optional(),
+  dob: z.string().refine((val) => !isNaN(Date.parse(val)), 'Date of birth must be a valid date'),
 });
 export const otpRequestSchema = z.object({
   method: z.enum(['email', 'phone']),

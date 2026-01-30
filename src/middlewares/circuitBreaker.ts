@@ -1,0 +1,26 @@
+import CircuitBreaker from 'opossum';
+
+export function createCircuitBreaker(action: (...args: unknown[]) => Promise<unknown>) {
+  const breaker = new CircuitBreaker(action, {
+    timeout: 15000, // Google can be slow
+    errorThresholdPercentage: 50, // % failures before open
+    resetTimeout: 30000, // try again after 30s
+    rollingCountTimeout: 60000,
+    rollingCountBuckets: 10,
+    volumeThreshold: 5, // minimum calls before opening
+  });
+
+  breaker.on('open', () => {
+    console.error('🚨 Google Routes circuit OPEN');
+  });
+
+  breaker.on('halfOpen', () => {
+    console.warn('🟡 Google Routes circuit HALF-OPEN');
+  });
+
+  breaker.on('close', () => {
+    console.log('✅ Google Routes circuit CLOSED');
+  });
+
+  return breaker;
+}

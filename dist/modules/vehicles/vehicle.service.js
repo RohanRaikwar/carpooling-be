@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteVehicle = exports.getVehicle = exports.updateVehicle = exports.createVehicle = void 0;
-const vehicle_model_1 = require("./vehicle.model");
+const vehicle_model_1 = require("@models/vehicle.model");
 const MAX_VEHICLES_PER_USER = 5;
 const createVehicle = async (userId, licenseCountry, licenseNumber) => {
     const count = await vehicle_model_1.VehicleModel.countDocuments({

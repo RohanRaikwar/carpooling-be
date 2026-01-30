@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const google_controller_1 = require("./google.controller");
+const validate_1 = require("@middlewares/validate");
+const google_validator_1 = require("./google.validator");
+const router = (0, express_1.Router)();
+router.post('/routes/compute', (0, validate_1.validate)({ body: google_validator_1.computeRouteSchema }), google_controller_1.googleController.routes);
+router.post('/routes/multi', (0, validate_1.validate)({ body: google_validator_1.multiRouteSchema }), google_controller_1.googleController.multiRoute);
+router.post('/roads/snap', (0, validate_1.validate)({ body: google_validator_1.snapRoadsSchema }), google_controller_1.googleController.roads);
+router.post('/geolocation', (0, validate_1.validate)({ body: google_validator_1.geolocationSchema }), google_controller_1.googleController.geolocation);
+router.get('/place/autocomplete', (0, validate_1.validate)({ query: google_validator_1.autocompleteSchema }), google_controller_1.googleController.autocomplete);
+router.get('/place/place-details', (0, validate_1.validate)({ query: google_validator_1.placeDetailsSchema }), google_controller_1.googleController.placeDetails);
+exports.default = router;

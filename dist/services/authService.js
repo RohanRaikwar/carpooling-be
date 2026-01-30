@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendOTP = exports.generateTokens = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const RefreshToken_1 = __importDefault(require("../models/RefreshToken"));
+const refreshtoken_model_1 = __importDefault(require("../models/refreshtoken.model"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'access_secret';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh_secret';
@@ -20,8 +20,8 @@ const generateTokens = async (user) => {
     });
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
-    await RefreshToken_1.default.create({
-        userId: user.uuid,
+    await refreshtoken_model_1.default.create({
+        uuid: user.uuid,
         token: refreshToken,
         expiresAt,
     });

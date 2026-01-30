@@ -7,7 +7,18 @@ export const getMe = async (req: AuthRequest, res: Response) => {
   try {
     const user = await Models.UserModel.findOne({ uuid: req.user.id }).select('-password');
     if (user) {
-      res.json(user);
+      res.status(200).json({
+        message: 'User fetched successfully',
+        user: {
+          id: user.uuid,
+          email: user.email,
+          name: user.name,
+          role: 'USER',
+          onboardingStatus: user.onboardingStatus,
+          salutation: user.salutation,
+          dob: user.dob,
+        },
+      });
     } else {
       res.status(404).json({ message: 'User not found' });
     }
@@ -21,9 +32,16 @@ export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) =
     const userId = req.user.id;
     const { name, salutation, dob } = req.body;
     console.log('user before update:', userId);
-    const user = await Models.UserModel.findOne({ uuid: userId });
+    const user = await Models.UserModel.findOne(
+      { uuid: userId },
+      { _id: 0, uuid: 1, email: 1, name: 1, salutation: 1, dob: 1, onboardingStatus: 1 },
+    );
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.onboardingStatus === enums.OnboardingStatus.COMPLETED) {
+      return res.status(400).json({ message: 'Onboarding already completed' });
     }
 
     user.name = name;
@@ -38,7 +56,9 @@ export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) =
         name: user.name,
         email: user.email,
         role: 'USER',
+        onboardingStatus: user.onboardingStatus,
       },
+      next: 'home',
     });
   } catch (error) {
     console.log(error);

@@ -6,9 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyMailer = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const logger_1 = __importDefault(require("../utils/logger"));
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const transporter = nodemailer_1.default.createTransport({
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT),
+    host: process.env.MAIL_HOST || 'smtp.gmail.com',
+    port: Number(process.env.MAIL_PORT) || 587,
     secure: false,
     auth: {
         user: process.env.MAIL_USER,

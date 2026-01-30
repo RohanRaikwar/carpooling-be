@@ -1,0 +1,57 @@
+name: Build & Deploy TypeScript Node.js App to VM
+
+on:
+  push:
+    branches:
+      - main # Only deploy from main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2️⃣ Setup Node.js 22
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      # 3️⃣ Install dependencies & build TypeScript
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build  # Make sure your tsconfig outputs to dist/
+
+      # 4️⃣ Setup SSH agent with your PEM key
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.VM_SSH_KEY }}
+
+      # 5️⃣ Deploy to VM
+      - name: Deploy to VM
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            echo "🔄 Deploying TypeScript server..."
+
+            cd ${{ secrets.PROJECT_PATH }} || exit
+
+            echo "📌 Pull latest code"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "📦 Installing production dependencies..."
+            npm ci --production
+
+            echo "🏗️ Building on VM (optional, you can skip if built on runner)..."
+            npm run build || echo "Build skipped"
+
+            echo "🚀 Restarting server with PM2..."
+            pm2 restart all || pm2 start dist/index.js --name your-app-name
+
+            echo "✅ Deployment complete!"
+          EOF

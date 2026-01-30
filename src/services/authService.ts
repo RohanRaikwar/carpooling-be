@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { IUser } from '../models/User';
-import RefreshToken from '../models/RefreshToken';
+import { IUser } from '../models/users.model';
+import RefreshToken from '../models/refreshtoken.model';
 import logger from '../utils/logger';
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'access_secret';
@@ -21,7 +21,7 @@ export const generateTokens = async (user: IUser) => {
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
 
   await RefreshToken.create({
-    userId: user.uuid,
+    uuid: user.uuid,
     token: refreshToken,
     expiresAt,
   });

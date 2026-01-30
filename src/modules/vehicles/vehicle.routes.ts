@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { uploadSingleImage } from '../../middleware/upload.middleware';
-import { validate } from '../../middleware/validate';
+import { uploadSingleImage } from '@middlewares/upload.middleware';
+import { validate } from '@middlewares/validate';
 import * as controller from './vehicle.controller';
 import {
   createVehicleSchema,

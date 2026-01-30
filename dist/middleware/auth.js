@@ -1,32 +1,30 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authorize = exports.protect = void 0;
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const tokens_service_1 = require("../modules/token/tokens.service");
+const apiResponse_1 = require("../utils/apiResponse");
+const httpStatus_1 = require("../utils/httpStatus");
 const protect = (req, res, next) => {
     let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    if (req.headers.authorization?.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
     if (!token) {
-        return res.status(401).json({ message: 'Not authorized, no token' });
+        return (0, apiResponse_1.sendError)(res, { message: 'Not authorized, no token', status: httpStatus_1.HttpStatus.UNAUTHORIZED });
     }
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'access_secret');
+        const decoded = (0, tokens_service_1.verifyAccessToken)(token);
         req.user = decoded;
-        console.log(req.user);
         next();
     }
     catch (error) {
-        res.status(401).json({ message: 'Not authorized, token failed' });
+        (0, apiResponse_1.sendError)(res, { message: 'Not authorized, token failed', status: httpStatus_1.HttpStatus.UNAUTHORIZED });
     }
 };
 exports.protect = protect;
 const authorize = (...roles) => (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
-        res.status(403).json({ message: 'Forbidden' });
+        (0, apiResponse_1.sendError)(res, { message: 'Forbidden', status: httpStatus_1.HttpStatus.FORBIDDEN });
         return;
     }
     next();

@@ -38,11 +38,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const userController = __importStar(require("../controllers/userController"));
-const authMiddleware_1 = require("../middleware/authMiddleware");
-const validate_1 = require("../middleware/validate");
+const validate_1 = require("../middlewares/validate");
 const schemas = __importStar(require("../utils/validationSchemas"));
 const router = express_1.default.Router();
 router.get('/me', userController.getMe);
-router.put('/me/profile', authMiddleware_1.protect, (0, validate_1.validate)({ body: schemas.updateProfileSchema }), userController.updateProfile);
-router.post('/me/profile/onboarding/1', (0, validate_1.validate)({ body: schemas.updateProfileSchemaOnBoarding }), userController.completeOnBoardingStep1);
+router.put('/me/profile', (0, validate_1.validate)({ body: schemas.updateProfileSchema }), userController.updateProfile);
+router.post('/me/onboarding/complete', (0, validate_1.validate)({ body: schemas.updateProfileSchemaOnBoarding }), userController.completeOnBoardingStep1);
 exports.default = router;

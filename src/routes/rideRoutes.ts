@@ -1,6 +1,6 @@
 import express from 'express';
 import { createRide, getRides, joinRide } from '../controllers/rideController';
-import { protect, authorize } from '../middleware/auth';
+import { protect, authorize } from '../middlewares/auth';
 
 const router = express.Router();
 

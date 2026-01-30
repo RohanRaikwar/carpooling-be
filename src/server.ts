@@ -1,3 +1,6 @@
+if (process.env.NODE_ENV === 'production') {
+  require('module-alias/register');
+}
 import dotenv from 'dotenv';
 dotenv.config();
 import { verifyMailer } from './config/mailer';

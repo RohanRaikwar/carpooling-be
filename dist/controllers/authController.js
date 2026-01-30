@@ -38,7 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logout = exports.resendOtp = exports.refreshToken = exports.login = exports.verifyOtp = exports.requestOtp = exports.signup = void 0;
 const models = __importStar(require("../models"));
-const RefreshToken_1 = __importDefault(require("../models/RefreshToken"));
+const refreshtoken_model_1 = __importDefault(require("../models/refreshtoken.model"));
 const otpService_1 = require("../services/otpService");
 const authService_1 = require("../services/authService");
 const mailService_1 = require("../services/mailService");
@@ -229,7 +229,7 @@ const refreshToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
         const decoded = jsonwebtoken_1.default.verify(refreshToken, REFRESH_TOKEN_SECRET);
-        const tokenDoc = await RefreshToken_1.default.findOne({
+        const tokenDoc = await refreshtoken_model_1.default.findOne({
             token: refreshToken,
             userId: decoded.id,
             revoked: false,
@@ -301,7 +301,7 @@ const logout = async (req, res) => {
     try {
         const { refreshToken } = req.body;
         if (refreshToken) {
-            await RefreshToken_1.default.findOneAndUpdate({ token: refreshToken }, { revoked: true });
+            await refreshtoken_model_1.default.findOneAndUpdate({ token: refreshToken }, { revoked: true });
         }
         res.status(200).json({ message: 'Logged out successfully' });
     }

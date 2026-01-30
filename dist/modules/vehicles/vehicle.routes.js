@@ -34,8 +34,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const upload_middleware_1 = require("../../middleware/upload.middleware");
-const validate_1 = require("../../middleware/validate");
+const upload_middleware_1 = require("@middlewares/upload.middleware");
+const validate_1 = require("@middlewares/validate");
 const controller = __importStar(require("./vehicle.controller"));
 const vehicle_validator_1 = require("./vehicle.validator");
 const router = (0, express_1.Router)();
