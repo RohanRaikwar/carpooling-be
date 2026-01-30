@@ -1,3 +1,6 @@
+if (process.env.NODE_ENV === 'production') {
+  require('module-alias/register');
+}
 import { Worker } from 'bullmq';
 import transporter from '@config/mailer';
 import { bullRedis } from '@queue/redisConnection';
