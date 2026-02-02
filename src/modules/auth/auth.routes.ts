@@ -1,6 +1,6 @@
 import express from 'express';
 import * as authController from './auth.controller';
-import { validate } from '@middlewares/validate';
+import { validate } from '../../middlewares/validate';
 import * as schemas from './auth.validator';
 
 const router = express.Router();

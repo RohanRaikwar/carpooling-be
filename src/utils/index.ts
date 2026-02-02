@@ -1,5 +1,5 @@
-import { sendError, sendSuccess } from './apiResponse';
-import { HttpStatus } from './httpStatus';
-import { asyncHandler } from './asyncHandler';
+import { sendError, sendSuccess } from './apiResponse.js';
+import { HttpStatus } from './httpStatus.js';
+import { asyncHandler } from './asyncHandler.js';
 
 export { sendSuccess, sendError, HttpStatus, asyncHandler };

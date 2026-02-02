@@ -1,8 +1,8 @@
-import { protect } from './auth';
-import { errorHandler } from './errorHandler';
-import { rateLimiter } from './rateLimit';
-import { requestTimeout } from './timeout';
-import { validate } from './validate';
-import { uploadSingleImage } from './upload.middleware';
+import { protect } from './auth.js';
+import { errorHandler } from './errorHandler.js';
+import { rateLimiter } from './rateLimit.js';
+import { requestTimeout } from './timeout.js';
+import { validate } from './validate.js';
+import { uploadSingleImage } from './upload.middleware.js';
 
 export { protect, errorHandler, rateLimiter, requestTimeout, validate, uploadSingleImage };

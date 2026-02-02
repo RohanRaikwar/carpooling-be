@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { googleService } from './google.service';
-import { sendSuccess, sendError, HttpStatus } from '@utils';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 
 export const googleController = {
   /* ================= ROUTES ================= */

@@ -1,42 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
+    "moduleResolution": "Node",
+    "module": "ESNext",
+    "target": "ES2022",
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "@models": ["models/index"],
-      "@models/*": ["models/*"],
-
-      "@utils": ["utils/index"],
-      "@utils/*": ["utils/*"],
-
-      "@config": ["config/index"],
-      "@config/*": ["config/*"],
-
-      "@middlewares": ["middlewares/index"],
-      "@middlewares/*": ["middlewares/*"],
-
-      "@modules": ["modules/index"],
-      "@modules/*": ["modules/*"],
-
-      "@cache": ["cache/index"],
-      "@cache/*": ["cache/*"],
-
-      "@queue": ["queue/index"],
-      "@queue/*": ["queue/*"],
-
-      "@lib": ["lib/index"],
-      "@lib/*": ["lib/*"]
-    },
-
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
+  ]
 }

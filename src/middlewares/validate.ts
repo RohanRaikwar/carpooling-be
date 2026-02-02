@@ -10,6 +10,7 @@ type SchemaTargets = {
 
 export const validate =
   (schemas: SchemaTargets) => (req: Request, res: Response, next: NextFunction) => {
+
     try {
       if (schemas.body) {
         schemas.body.parse(req.body); // works for JSON & form-data
@@ -24,10 +25,9 @@ export const validate =
       }
 
       if (schemas.file) {
-        console.log(req.file);
-
         schemas.file.parse(req.file); // multer single file
       }
+
 
       next();
     } catch (error) {

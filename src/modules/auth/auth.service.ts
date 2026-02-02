@@ -1,26 +1,48 @@
-import * as models from '@models';
-import { generateTokens, verifyRefreshToken } from '../token/tokens.service';
-import { Role } from '@modules/user/user.constants';
+import { prisma } from '../../config/index.js';
+import { generateTokens, verifyRefreshToken } from '../token/tokens.service.js';
+import { Role } from '../user/user.constants.js';
 
+/**
+ * Signup Service
+ */
 export const signupService = async (method: string, identifier: string) => {
-  let user = await models.UserModel.findOne({ [method]: identifier });
-  console.log(user);
+  const user = await prisma.user.findFirst({
+    where: { [method]: identifier },
+  });
 
+  // User exists & already verified → block signup
   if (user && user.isVerified) {
     return { success: false, reason: 'USER_EXISTS' };
   }
 
+  // User does not exist → create new user
   if (!user) {
-    user = await models.UserModel.create({
-      [method]: identifier,
-      onboardingStatus: 'PENDING',
-      isVerified: false,
+    const newUser = await prisma.user.create({
+      data: {
+        [method]: identifier,
+        onboardingStatus: 'PENDING',
+        isVerified: false,
+      },
     });
+
+    return {
+      success: true,
+      user: newUser,
+      reason: 'USER_CREATED',
+    };
   }
 
-  return { success: true, user, reason: 'USER_CREATED' };
+  // User exists but not verified → reuse OTP flow
+  return {
+    success: true,
+    user,
+    reason: 'USER_PENDING_VERIFICATION',
+  };
 };
 
+/**
+ * Verify OTP Service
+ */
 export const verifyOtpService = async (
   identifier: string,
   code: string,
@@ -28,60 +50,92 @@ export const verifyOtpService = async (
   method: string,
 ) => {
   try {
-    console.log('verifyOtpService started');
-    const user = await models.UserModel.findOne({ [method]: identifier });
+    const user = await prisma.user.findFirst({
+      where: { [method]: identifier },
+    });
 
-    if (!user) return { success: false, reason: 'USER_NOT_FOUND' };
-
-    if (purpose === 'signup') {
-      user.isVerified = true;
-      await user.save();
+    if (!user) {
+      return { success: false, reason: 'USER_NOT_FOUND' };
     }
 
+    // Signup flow → mark user verified
+    if (purpose === 'signup') {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true },
+      });
+
+      user.isVerified = true;
+    }
+
+    // Login flow → ensure verified user
     if (purpose === 'login' && !user.isVerified) {
       return { success: false, reason: 'USER_NOT_VERIFIED' };
     }
 
-    const tokens = await generateTokens({ id: user.uuid, role: Role.USER });
-    const nextStep = user?.onboardingStatus === 'COMPLETED' ? 'home' : 'onboarding';
+    const tokens = await generateTokens({
+      id: user.id,
+      role: Role.USER,
+    });
 
-    console.log('verifyOtpService success');
-    return { success: true, user, tokens, next: nextStep };
+    const nextStep = user.onboardingStatus === 'COMPLETED' ? 'home' : 'onboarding';
+
+    return {
+      success: true,
+      user,
+      tokens,
+      next: nextStep,
+    };
   } catch (error: any) {
     console.error('verifyOtpService error:', error);
-    return { success: false, reason: error?.message || 'UNKNOWN_ERROR' };
+    return {
+      success: false,
+      reason: error?.message || 'UNKNOWN_ERROR',
+    };
   }
 };
 
+/**
+ * Refresh Token Service
+ */
 export const refreshTokenService = async (refreshToken: string) => {
   try {
     const decoded = await verifyRefreshToken(refreshToken);
+    console.log(decoded);
 
     if (!decoded) {
       return { success: false, reason: 'INVALID_REFRESH' };
     }
 
-    const tokenDoc = await models.RefreshToken.findOne({
-      token: refreshToken,
-      uuid: decoded.id,
-      revoked: false,
+    const tokenDoc = await prisma.refreshToken.findFirst({
+      where: {
+        token: refreshToken,
+        userId: decoded.id,
+        revoked: false,
+      },
     });
 
     if (!tokenDoc) {
       return { success: false, reason: 'INVALID_REFRESH' };
     }
-    tokenDoc.revoked = true;
-    await tokenDoc.save();
 
-    // ❗ FIX: Use uuid, not _id
-    const user = await models.UserModel.findOne({ uuid: decoded.id });
+    // Revoke existing refresh token
+    await prisma.refreshToken.update({
+      where: { id: tokenDoc.id },
+      data: { revoked: true },
+    });
+
+    const user = await prisma.user.findFirst({
+      where: { id: decoded.id },
+    });
+    console.log(user);
 
     if (!user) {
       return { success: false, reason: 'USER_NOT_FOUND' };
     }
 
     const tokens = await generateTokens({
-      id: user.uuid,
+      id: user.id,
       role: Role.USER,
     });
 
@@ -95,38 +149,69 @@ export const refreshTokenService = async (refreshToken: string) => {
   }
 };
 
+/**
+ * Request OTP Service
+ */
 export const requestOtpService = async (
   identifier: string,
   purpose: 'signup' | 'login' | 'reset_password',
   method: string,
 ) => {
-  const user = await models.UserModel.findOne({ [method]: identifier });
+  const user = await prisma.user.findFirst({
+    where: { [method]: identifier },
+  });
 
+  // Signup → block if verified user already exists
   if (purpose === 'signup' && user && user.isVerified) {
     return { success: false, reason: 'USER_EXISTS' };
   }
 
+  // Login → do not expose user existence
   if (purpose === 'login' && !user) {
-    return { success: true, message: 'OTP sent if account exists' };
+    return {
+      success: true,
+      message: 'OTP sent if account exists',
+    };
   }
 
   return { success: true, user };
 };
 
+/**
+ * Logout Service
+ */
 export const logoutService = async (refreshToken: string) => {
   try {
-    await models.RefreshToken.findOneAndUpdate({ token: refreshToken }, { revoked: true });
+    const data = await prisma.refreshToken.updateMany({
+      where: { token: refreshToken },
+      data: { revoked: true },
+    });
+    console.log(data);
+
+    if (data.count == 0) {
+      return { success: false, reason: 'Token not found' };
+    }
+
     return { success: true, message: 'Logged out successfully' };
   } catch (error) {
+    console.error('logoutService error:', error);
     return { success: false, reason: 'LOGOUT_FAILED' };
   }
 };
 
+/**
+ * Login Service
+ */
 export const loginService = async (method: string, identifier: string) => {
-  const user = await models.UserModel.findOne({ [method]: identifier });
+  const user = await prisma.user.findFirst({
+    where: { [method]: identifier },
+  });
 
   if (!user || !user.isVerified) {
-    return { success: false, reason: 'USER_NOT_FOUND_OR_VERIFIED' };
+    return {
+      success: false,
+      reason: 'USER_NOT_FOUND_OR_VERIFIED',
+    };
   }
 
   return { success: true, user };

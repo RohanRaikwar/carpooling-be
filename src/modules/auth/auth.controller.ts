@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sendSuccess, sendError, HttpStatus } from '@utils';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index';
 import {
   signupService,
   verifyOtpService,
@@ -132,7 +132,7 @@ export const verifyOtpCont = async (req: Request, res: Response) => {
         data: {
           ...result.tokens,
           user: {
-            id: result.user.uuid,
+            id: result.user.id,
             email: result.user.email,
             role: 'USER',
           },

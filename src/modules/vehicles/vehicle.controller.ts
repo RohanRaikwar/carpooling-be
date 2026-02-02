@@ -1,99 +1,64 @@
-import { Response, NextFunction } from 'express';
+import { Response } from 'express';
 import * as VehicleService from './vehicle.service';
-import { AuthRequest } from '@middlewares/authMiddleware';
-import { sendSuccess, sendError, HttpStatus } from '@utils';
+import { AuthRequest } from '../../middlewares/authMiddleware';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index';
+import { uploadToS3 } from '../../services/s3.service';
+import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service';
 
 /* ================= CREATE VEHICLE ================= */
-export const createVehicle = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const createVehicle = async (req: AuthRequest, res: Response) => {
   try {
     const { licenseCountry, licenseNumber } = req.body;
 
     const vehicle = await VehicleService.createVehicle(req.user.id, licenseCountry, licenseNumber);
 
+    // Invalidate user vehicles list cache
+    await deleteCache(cacheKeys.userVehicles(req.user.id));
+
     return sendSuccess(res, {
       status: HttpStatus.CREATED,
       message: 'Vehicle created successfully',
-      data: { vehicleId: vehicle.uuid },
+      data: { vehicleId: vehicle.id },
     });
-  } catch (error) {
+  } catch (error: any) {
     return sendError(res, {
-      status: HttpStatus.INTERNAL_ERROR,
-      message: 'Failed to create vehicle',
-      error,
+      status:
+        error.message === 'MAX_VEHICLE_LIMIT_REACHED'
+          ? HttpStatus.CONFLICT
+          : HttpStatus.INTERNAL_ERROR,
+      message:
+        error.message === 'MAX_VEHICLE_LIMIT_REACHED'
+          ? 'Maximum vehicle limit reached'
+          : 'Failed to create vehicle',
     });
   }
 };
 
-/* ================= UPDATE BRAND & MODEL ================= */
-export const updateBrandModel = async (req: AuthRequest, res: Response) => {
+/* ================= UPDATE VEHICLE DETAILS ================= */
+export const updateVehicleDetails = async (req: AuthRequest, res: Response) => {
   try {
-    await VehicleService.updateVehicle(req.user.id, req.params.id as string, {
+    const vehicleId = req.params.id as string;
+
+    await VehicleService.updateVehicleDetailService(req.user.id, vehicleId, {
       brand: req.body.brand,
-      model: req.body.model,
-    });
-
-    return sendSuccess(res, {
-      message: 'Vehicle brand and model updated',
-      data: { vehicleId: req.params.id },
-    });
-  } catch (error) {
-    return sendError(res, {
-      message: 'Failed to update brand and model',
-      error,
-    });
-  }
-};
-
-/* ================= UPDATE TYPE ================= */
-export const updateType = async (req: AuthRequest, res: Response) => {
-  try {
-    await VehicleService.updateVehicle(req.user.id, req.params.id as string, {
+      model_num: req.body.model_num,
       type: req.body.type,
-    });
-
-    return sendSuccess(res, {
-      message: 'Vehicle type updated',
-    });
-  } catch (error) {
-    return sendError(res, {
-      message: 'Failed to update vehicle type',
-      error,
-    });
-  }
-};
-
-/* ================= UPDATE COLOR ================= */
-export const updateColor = async (req: AuthRequest, res: Response) => {
-  try {
-    await VehicleService.updateVehicle(req.user.id, req.params.id as string, {
       color: req.body.color,
-    });
-
-    return sendSuccess(res, {
-      message: 'Vehicle color updated',
-    });
-  } catch (error) {
-    return sendError(res, {
-      message: 'Failed to update vehicle color',
-      error,
-    });
-  }
-};
-
-/* ================= UPDATE YEAR ================= */
-export const updateYear = async (req: AuthRequest, res: Response) => {
-  try {
-    await VehicleService.updateVehicle(req.user.id, req.params.id as string, {
       year: req.body.year,
     });
 
+    // Invalidate vehicle cache after update
+    await deleteCache(cacheKeys.vehicle(vehicleId));
+
     return sendSuccess(res, {
-      message: 'Vehicle year updated',
+      message: 'Vehicle details updated successfully',
     });
-  } catch (error) {
+  } catch (error: any) {
     return sendError(res, {
-      message: 'Failed to update vehicle year',
-      error,
+      status:
+        error.message === 'VEHICLE_NOT_FOUND' ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_ERROR,
+      message:
+        error.message === 'VEHICLE_NOT_FOUND' ? 'Vehicle not found' : 'Failed to update vehicle',
     });
   }
 };
@@ -108,19 +73,39 @@ export const uploadImage = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const imageUrl = (req.file as any).location || req.file.path;
+    const vehicleId = req.params.id as string;
+    const uploadResult = await uploadToS3({ folder: 'vehicle', file: req.file });
 
-    await VehicleService.updateVehicle(req.user.id, req.params.id as string, {
+    if (!uploadResult.success) {
+      return sendError(res, {
+        status: HttpStatus.INTERNAL_ERROR,
+        message: 'Failed to upload image',
+      });
+    }
+
+    const imageUrl = uploadResult.url;
+
+    const data = await VehicleService.updateVehicle(req.user.id, vehicleId, {
       imageUrl,
     });
 
+    if (!data.success) {
+      return sendError(res, {
+        status: HttpStatus.NOT_FOUND,
+        message: data.message,
+      });
+    }
+
+    // Invalidate vehicle cache after update
+    await deleteCache(cacheKeys.vehicle(vehicleId));
+
     return sendSuccess(res, {
       message: 'Vehicle image uploaded successfully',
+      data
     });
   } catch (error) {
     return sendError(res, {
       message: 'Failed to upload vehicle image',
-      error,
     });
   }
 };
@@ -128,23 +113,34 @@ export const uploadImage = async (req: AuthRequest, res: Response) => {
 /* ================= GET VEHICLE ================= */
 export const getVehicle = async (req: AuthRequest, res: Response) => {
   try {
-    const vehicle = await VehicleService.getVehicle(req.user.id, req.params.id as string);
+    const vehicleId = req.params.id as string;
+    const cacheKey = cacheKeys.vehicle(vehicleId);
 
-    if (!vehicle) {
-      return sendError(res, {
-        status: HttpStatus.NOT_FOUND,
-        message: 'Vehicle not found',
+    // Try cache first
+    const cachedVehicle = await getCache(cacheKey);
+    if (cachedVehicle) {
+      return sendSuccess(res, {
+        message: 'Vehicle fetched successfully',
+        data: cachedVehicle,
       });
     }
+
+    // Cache miss - fetch from DB
+    const vehicle = await VehicleService.getVehicle(req.user.id, vehicleId);
+
+    // Cache the result
+    await setCache(cacheKey, vehicle);
 
     return sendSuccess(res, {
       message: 'Vehicle fetched successfully',
       data: vehicle,
     });
-  } catch (error) {
+  } catch (error: any) {
     return sendError(res, {
-      message: 'Failed to fetch vehicle',
-      error,
+      status:
+        error.message === 'VEHICLE_NOT_FOUND' ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_ERROR,
+      message:
+        error.message === 'VEHICLE_NOT_FOUND' ? 'Vehicle not found' : 'Failed to fetch vehicle',
     });
   }
 };
@@ -152,15 +148,24 @@ export const getVehicle = async (req: AuthRequest, res: Response) => {
 /* ================= DELETE VEHICLE ================= */
 export const deleteVehicle = async (req: AuthRequest, res: Response) => {
   try {
-    await VehicleService.deleteVehicle(req.user.id, req.params.id as string);
+    const vehicleId = req.params.id as string;
+
+    await VehicleService.deleteVehicle(req.user.id, vehicleId);
+
+    // Invalidate vehicle cache after delete
+    await deleteCache(cacheKeys.vehicle(vehicleId));
+    await deleteCache(cacheKeys.userVehicles(req.user.id));
 
     return sendSuccess(res, {
       message: 'Vehicle deleted successfully',
     });
-  } catch (error) {
+  } catch (error: any) {
     return sendError(res, {
-      message: 'Failed to delete vehicle',
-      error,
+      status:
+        error.message === 'VEHICLE_NOT_FOUND' ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_ERROR,
+      message:
+        error.message === 'VEHICLE_NOT_FOUND' ? 'Vehicle not found' : 'Failed to delete vehicle',
     });
   }
 };
+

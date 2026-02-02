@@ -86,3 +86,5 @@ prisma/migrations/
 # ========================
 tmp/
 temp/
+
+/src/generated/prisma

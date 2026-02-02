@@ -1,4 +1,4 @@
-import redis from '@cache/redis';
+import redis from '../../cache/redis.js';
 import { OTP_EXPIRY_MINUTES, OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_SEC } from './otp.constants';
 
 const otpKey = (identifier: string, purpose: string, method: string) =>
@@ -34,6 +34,7 @@ export const verifyOtp = async (
 ) => {
   const key = otpKey(identifier, purpose, method);
   const data = await redis.get(key);
+  console.log(data);
 
   if (!data) return { success: false, reason: 'expired' };
 

@@ -1,6 +1,6 @@
-import RefreshToken from './refreshtoken.model';
-export { AccountModel } from './accounts';
-export { UserModel, IUser } from './users.model';
-export { VehicleModel } from './vehicle.model';
-export { TravelPreference } from './travelPreference.model';
+import RefreshToken from './refreshtoken.model.js';
+export { AccountModel } from './accounts.js';
+export { UserModel, IUser } from './users.model.js';
+export { VehicleModel } from './vehicle.model.js';
+export { TravelPreference } from './travelPreference.model.js';
 export { RefreshToken };

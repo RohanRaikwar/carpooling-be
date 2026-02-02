@@ -1,16 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+
 import {
   authRouter,
   travelPreferenceRouter,
   vehiclesRouter,
   mapRouter,
   userRouter,
-} from '@modules';
-import rideRoutes from './routes/rideRoutes';
-import connectDB from '@config/database';
-import { protect, errorHandler } from '@middlewares';
+} from './modules/index.js';
+import rideRoutes from './routes/rideRoutes.js';
+import connectDB from './config/database.js';
+import { protect, errorHandler } from './middlewares/index.js';
 
 const app = express();
 connectDB();

@@ -1,34 +1,89 @@
+import { VehicleType } from '@prisma/client';
 import { z } from 'zod';
 
-export const createVehicleSchema = z.object({
-  licenseCountry: z.string().min(1),
-  licenseNumber: z.string().min(1),
-});
+/**
+ * Shared helpers
+ */
+const currentYear = new Date().getFullYear();
 
-export const updateBrandModelSchema = z.object({
-  brand: z.string().min(1),
-  model: z.string().min(1),
-});
+/**
+ * Create Vehicle (initial registration)
+ */
+export const createVehicleSchema = z
+  .object({
+    licenseCountry: z.string().trim().min(1, 'License country is required'),
+    licenseNumber: z.string().trim().min(1, 'License number is required'),
+  })
+  .strict();
 
-export const updateTypeSchema = z.object({
-  type: z.enum(['sedan', 'hatchback', 'minibus']),
-});
+/**
+ * Update full vehicle details
+ */
+export const updateVehicleDetailsSchema = z
+  .object({
+    brand: z.string().trim().min(1, 'Brand is required'),
+    model_num: z.string().trim().min(1, 'Model No.is required'),
+    type: z.nativeEnum(VehicleType),
+    color: z.string().trim().min(1, 'Color is required'),
+    year: z
+      .number()
+      .int()
+      .min(1990, 'Year must be >= 1990')
+      .max(currentYear, `Year cannot be greater than ${currentYear}`),
+  })
+  .strict();
 
-export const updateColorSchema = z.object({
-  color: z.string().min(1),
-});
+/**
+ * Update brand + model only
+ */
+export const updateBrandModelSchema = z
+  .object({
+    brand: z.string().trim().min(1, 'Brand is required'),
+    model: z.string().trim().min(1, 'Model is required'),
+  })
+  .strict();
 
-export const updateYearSchema = z.object({
-  year: z.number().min(1990).max(new Date().getFullYear()),
-});
+/**
+ * Update vehicle type only
+ */
+export const updateTypeSchema = z
+  .object({
+    type: z.nativeEnum(VehicleType),
+  })
+  .strict();
 
-export const imageUploadSchema = z.object({
-  fieldname: z.literal('image'),
-  mimetype: z.string().startsWith('image/', {
-    message: 'Only image files are allowed',
-  }),
-  size: z.number().max(5 * 1024 * 1024, {
-    message: 'Image must be less than 5MB',
-  }),
-  path: z.string(),
-});
+/**
+ * Update vehicle color only
+ */
+export const updateColorSchema = z
+  .object({
+    color: z.string().trim().min(1, 'Color is required'),
+  })
+  .strict();
+
+/**
+ * Update vehicle year only
+ */
+export const updateYearSchema = z
+  .object({
+    year: z
+      .number()
+      .int()
+      .min(1990, 'Year must be >= 1990')
+      .max(currentYear, `Year cannot be greater than ${currentYear}`),
+  })
+  .strict();
+
+/**
+ * Image upload validation (S3 / Multer)
+ */
+export const imageUploadSchema = z
+  .object({
+    fieldname: z.literal('image'),
+    originalname: z.string(),
+    encoding: z.string(),
+    mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+    buffer: z.instanceof(Buffer),
+    size: z.number().max(5 * 1024 * 1024),
+  })
+  .strict();

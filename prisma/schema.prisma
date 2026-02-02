@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js" // ✅ required for Prisma v7
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+enum OnboardingStatus {
+  PENDING
+  COMPLETED
+}
+
+enum Salutation {
+  MR
+  MS
+  MRS
+  MX
+  OTHER
+}
+
+enum Chattiness {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PetsPreference {
+  YES
+  NO
+  SOMETIMES
+}
+
+enum VehicleType {
+  sedan
+  hatchback
+  suv
+  minibus
+  coupe
+  convertible
+  pickup
+  van
+  truck
+}
+
+model User {
+  id String @id @default(uuid())
+
+  name       String?     @db.VarChar(255)
+  nickName   String?     @db.VarChar(255)
+  salutation Salutation?
+  dob        DateTime?
+
+  email String? @unique
+  phone String? @unique
+
+  avatarUrl String?
+
+  onboardingStatus OnboardingStatus @default(PENDING)
+  isVerified       Boolean          @default(false)
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  travelPreference TravelPreference?
+  vehicles         Vehicle[]
+  refreshTokens    RefreshToken[]
+
+  @@index([id])
+}
+
+model TravelPreference {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  chattiness Chattiness
+  pets       PetsPreference
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([id])
+}
+
+model Vehicle {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  licenseCountry String
+  licenseNumber  String
+
+  brand     String?
+  model_num String?
+  type      VehicleType?
+  color     String?
+  year      Int?
+  imageUrl  String?
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, deletedAt])
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}

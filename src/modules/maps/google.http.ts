@@ -1,5 +1,5 @@
-import { axiosClient } from '@lib/axios/axios.client';
-import { ApiResponse } from '@lib/axios/types';
+import { axiosClient } from '../../lib/axios/axios.client';
+import { ApiResponse } from '../../lib/axios/types';
 
 export const googleHttp = {
   /**

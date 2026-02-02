@@ -1,6 +1,7 @@
 import express from 'express';
 import * as userController from './user.controller';
-import { validate } from '@middlewares';
+import { validate } from '../../middlewares/index';
+import { uploadSingleImage } from '../../middlewares/upload.middleware';
 import * as schemas from './user.validators';
 
 const router = express.Router();
@@ -15,6 +16,12 @@ router.post(
   '/me/onboarding/complete',
   validate({ body: schemas.updateProfileSchemaOnBoarding }),
   userController.completeOnBoardingStep1 as unknown as express.RequestHandler,
+);
+router.post(
+  '/me/avatar',
+  uploadSingleImage,
+  validate({ file: schemas.avatarUploadSchema }),
+  userController.uploadAvatar as unknown as express.RequestHandler,
 );
 
 export default router;

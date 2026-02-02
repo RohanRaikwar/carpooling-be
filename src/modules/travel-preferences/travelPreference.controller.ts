@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { TravelPreference } from '@models/travelPreference.model';
+import { prisma } from '../../config/index';
 import { AuthRequest } from '../../types/auth';
-import { sendSuccess, sendError, HttpStatus } from '@utils';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index';
 
 /**
  * Save or update travel preference
@@ -11,11 +11,11 @@ export const saveTravelPreference = async (req: AuthRequest, res: Response, next
     const userId = req.user.id;
     const { chattiness, pets } = req.body;
 
-    const preference = await TravelPreference.findOneAndUpdate(
-      { userId },
-      { chattiness, pets },
-      { upsert: true, new: true },
-    );
+    const preference = await prisma.travelPreference.upsert({
+      where: { userId },
+      update: { chattiness, pets },
+      create: { userId, chattiness, pets },
+    });
 
     return sendSuccess(res, {
       status: HttpStatus.OK,
@@ -38,7 +38,9 @@ export const getTravelPreference = async (req: AuthRequest, res: Response, next:
   try {
     const userId = req.user.id;
 
-    const preference = await TravelPreference.findOne({ userId });
+    const preference = await prisma.travelPreference.findUnique({
+      where: { userId },
+    });
 
     if (!preference) {
       return sendError(res, {

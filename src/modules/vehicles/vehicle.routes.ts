@@ -1,27 +1,23 @@
 import { Router } from 'express';
-import { uploadSingleImage } from '@middlewares/upload.middleware';
-import { validate } from '@middlewares/validate';
+import { uploadSingleImage } from '../../middlewares/upload.middleware.js';
+import { validate } from '../../middlewares/validate.js';
 import * as controller from './vehicle.controller';
 import {
   createVehicleSchema,
-  updateBrandModelSchema,
-  updateYearSchema,
-  updateColorSchema,
-  updateTypeSchema,
+  updateVehicleDetailsSchema,
   imageUploadSchema,
 } from './vehicle.validator';
 
 const router = Router();
 
 router.post('/', validate({ body: createVehicleSchema }), controller.createVehicle);
+router.put('/:id', validate({ body: createVehicleSchema }), controller.createVehicle);
 router.put(
-  '/:id/brand-model',
-  validate({ body: updateBrandModelSchema }),
-  controller.updateBrandModel,
+  '/:id/update-details',
+  validate({ body: updateVehicleDetailsSchema }),
+  controller.updateVehicleDetails,
 );
-router.put('/:id/type', validate({ body: updateTypeSchema }), controller.updateType);
-router.put('/:id/color', validate({ body: updateColorSchema }), controller.updateColor);
-router.put('/:id/year', validate({ body: updateYearSchema }), controller.updateYear);
+
 router.post(
   '/:id/image',
   uploadSingleImage,

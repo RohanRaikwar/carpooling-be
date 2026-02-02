@@ -28,3 +28,17 @@ export const updateProfileSchemaOnBoarding = z.object({
 
   dob: z.string().refine((val) => !isNaN(Date.parse(val)), 'Date of birth must be a valid date'),
 });
+
+export const avatarUploadSchema = z
+  .object({
+    fieldname: z.literal('image'),
+    originalname: z.string(),
+    encoding: z.string(),
+    mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+    buffer: z.instanceof(Buffer),
+    size: z.number().max(5 * 1024 * 1024),
+  })
+  .strict();
+
+
+

@@ -1,27 +1,37 @@
 import multer from 'multer';
-import path from 'path';
 import { Request } from 'express';
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, name);
-  },
-});
+/**
+ * Memory storage (NO local file saved)
+ * File will be available in req.file.buffer
+ */
+const storage = multer.memoryStorage();
 
-const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-
-  if (!allowed.includes(file.mimetype)) {
-    return cb(new Error('Only JPG, PNG, WEBP images are allowed'));
+/**
+ * Image validation
+ */
+const fileFilter = (
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
+  console.log(file.mimetype);
+  if (!allowedMimeTypes.includes(file.mimetype)) {
+    return cb(new Error('Only JPG, PNG, and WEBP images are allowed'));
   }
+
   cb(null, true);
 };
 
+/**
+ * Single image upload middleware
+ * Field name: "image"
+ */
 export const uploadSingleImage = multer({
   storage,
   fileFilter,

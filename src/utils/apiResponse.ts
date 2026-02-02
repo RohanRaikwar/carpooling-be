@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import { HttpStatus } from './httpStatus';
-import { statusMap } from './statusMap';
+import { HttpStatus } from './httpStatus.js';
+import { statusMap } from './statusMap.js';
 
 interface SuccessPayload {
   status?: HttpStatus;

@@ -1,7 +1,7 @@
-import authRouter from './auth/auth.routes';
-import vehiclesRouter from './vehicles/vehicle.routes';
-import travelPreferenceRouter from './travel-preferences/travelPreference.routes';
-import mapRouter from './maps/google.routes';
-import userRouter from './user/user.routes';
+import authRouter from './auth/auth.routes.js';
+import vehiclesRouter from './vehicles/vehicle.routes.js';
+import travelPreferenceRouter from './travel-preferences/travelPreference.routes.js';
+import mapRouter from './maps/google.routes.js';
+import userRouter from './user/user.routes.js';
 
 export { authRouter, vehiclesRouter, travelPreferenceRouter, mapRouter, userRouter };

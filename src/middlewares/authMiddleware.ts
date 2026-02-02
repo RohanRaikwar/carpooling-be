@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserModel } from '../models';
+import { prisma } from '../config/index.js';
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'access_secret';
 
@@ -18,7 +18,22 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET) as any;
       console.log(decoded);
 
-      req.user = await UserModel.find({ uuid: decoded.user.id }).select('-password');
+      req.user = await prisma.user.findUnique({
+        where: { id: decoded.user.id },
+        select: {
+          id: true,
+          name: true,
+          nickName: true,
+          salutation: true,
+          dob: true,
+          email: true,
+          phone: true,
+          onboardingStatus: true,
+          isVerified: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
       if (!req.user) {
         return res.status(401).json({ message: 'Not authorized, user not found' });

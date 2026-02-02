@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { googleController } from './google.controller';
-import { validate } from '@middlewares/validate';
+import { validate } from '../../middlewares/validate';
 import {
   computeRouteSchema,
   multiRouteSchema,

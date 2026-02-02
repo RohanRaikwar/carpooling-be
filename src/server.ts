@@ -1,15 +1,11 @@
-if (process.env.NODE_ENV === 'production') {
-  require('module-alias/register');
-}
 import dotenv from 'dotenv';
 dotenv.config();
-import { verifyMailer } from './config/mailer';
-
+import { verifyMailer } from './config/index.js';
 import http from 'http'; // Added: Import http module
-import app from './app';
+import app from './app.js';
 // import connectDB from './config/database';
 // import { connectRedis } from './config/redis';
-import logger from './utils/logger';
+import logger from './utils/logger.js';
 
 // import { initSocket } from './socket';
 

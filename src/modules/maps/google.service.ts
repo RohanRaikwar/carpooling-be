@@ -2,9 +2,9 @@
 import { googleHttp } from './google.http';
 import { RouteRequest, RoadsRequest, GeolocationRequest, MultiRouteRequest } from './google.types';
 import { clusterStops } from './google.cluster';
-import redis from '@cache/redis';
+import redis from '../../cache/redis';
 import polyline from '@mapbox/polyline';
-import { createCircuitBreaker } from '@middlewares/circuitBreaker';
+import { createCircuitBreaker } from '../../middlewares/circuitBreaker';
 const routesBreaker = createCircuitBreaker(googleHttp.routes);
 
 /**

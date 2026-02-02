@@ -1,4 +1,4 @@
-import { HttpStatus } from './httpStatus';
+import { HttpStatus } from './httpStatus.js';
 
 export const statusMap: Record<HttpStatus, number> = {
   OK: 200,

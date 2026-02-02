@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Tokens, DecodedToken } from './tokens.types';
-import { RefreshToken } from '@models';
+import { RefreshToken } from '../../models/index.js';
+import { prisma } from '../../config/index.js';
 
 import {
   ACCESS_TOKEN_SECRET,
@@ -22,11 +23,13 @@ export const generateTokens = async (payload: DecodedToken): Promise<Tokens> => 
   });
 
   // Save refresh token to DB
-  await RefreshToken.create({
-    token: refreshToken,
-    uuid: payload.id,
-    revoked: false,
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 7 days
+  await prisma.refreshToken.create({
+    data: {
+      token: refreshToken,
+      userId: payload.id,
+      revoked: false,
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 7 days
+    },
   });
 
   return { accessToken, refreshToken };
