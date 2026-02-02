@@ -79,7 +79,7 @@ Thumbs.db
 # ========================
 # Prisma (if used)
 # ========================
-prisma/migrations/
+
 
 # ========================
 # Temporary files
