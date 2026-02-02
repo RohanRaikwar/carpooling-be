@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sendSuccess, sendError, HttpStatus } from '../../utils/index';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 import {
   signupService,
   verifyOtpService,
@@ -7,15 +7,15 @@ import {
   logoutService,
   loginService,
   requestOtpService,
-} from './auth.service';
-import { sendMail } from '../mail/mail.service';
+} from './auth.service.js';
+import { sendMail } from '../mail/mail.service.js';
 import {
   signupOtpTemplate,
   loginOtpTemplate,
   resetOtpTemplate,
   signupWelcomeTemplate,
-} from '../mail/mail.templates';
-import { createOtp, verifyOtp, resendOtp } from '../otp/otp.service';
+} from '../mail/mail.templates.js';
+import { createOtp, verifyOtp, resendOtp } from '../otp/otp.service.js';
 
 export const signup = async (req: Request, res: Response) => {
   try {

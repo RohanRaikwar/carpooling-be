@@ -1,5 +1,5 @@
-import OTP from '../models/otp.model';
-import { generateOTP } from '../utils/generateOtp';
+import OTP from '../models/otp.model.js';
+import { generateOTP } from '../utils/generateOtp.js';
 
 const OTP_EXPIRY_MS = 2 * 60 * 1000; // 5 minutes
 const MAX_VERIFY_ATTEMPTS = 5;

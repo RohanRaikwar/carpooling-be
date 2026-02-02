@@ -1,10 +1,15 @@
 import { Response } from 'express';
-import { AuthRequest } from '../../types/auth';
+import { AuthRequest } from '../../types/auth.js';
 import { HttpStatus, sendSuccess, sendError } from '../../utils/index.js';
-import { uploadToS3 } from '../../services/s3.service';
-import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service';
+import { uploadToS3 } from '../../services/s3.service.js';
+import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service.js';
 
-import { getMeService, completeOnBoardingStep1Service, updateProfileService, updateAvatarService } from './user.service';
+import {
+  getMeService,
+  completeOnBoardingStep1Service,
+  updateProfileService,
+  updateAvatarService,
+} from './user.service.js';
 
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {
@@ -166,4 +171,3 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-

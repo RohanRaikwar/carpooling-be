@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { prisma } from '../../config/index';
-import { AuthRequest } from '../../types/auth';
-import { sendSuccess, sendError, HttpStatus } from '../../utils/index';
+import { prisma } from '../../config/index.js';
+import { AuthRequest } from '../../types/auth.js';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 
 /**
  * Save or update travel preference

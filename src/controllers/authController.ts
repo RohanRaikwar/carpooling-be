@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import * as models from '../models';
-import * as enums from '../constants/enums';
-import RefreshToken from '../models/refreshtoken.model';
-import { createOTP, verifyOTP, resendOTPService } from '../services/otpService';
-import { sendOTP, generateTokens } from '../services/authService';
-import { sendMail } from '../services/mailService';
-import logger from '../utils/logger';
+import * as models from '../models/index.js';
+import * as enums from '../constants/enums.js';
+import RefreshToken from '../models/refreshtoken.model.js';
+import { createOTP, verifyOTP, resendOTPService } from '../services/otpService.js';
+import { sendOTP, generateTokens } from '../services/authService.js';
+import { sendMail } from '../services/mailService.js';
+import logger from '../utils/logger.js';
 import jwt from 'jsonwebtoken';
 
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh_secret';

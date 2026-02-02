@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { AuthRequest } from '../types/auth';
-import { verifyAccessToken } from '../modules/token/tokens.service';
-import { sendError } from '../utils/apiResponse';
-import { HttpStatus } from '../utils/httpStatus';
+import { AuthRequest } from '../types/auth.js';
+import { verifyAccessToken } from '../modules/token/tokens.service.js';
+import { sendError } from '../utils/apiResponse.js';
+import { HttpStatus } from '../utils/httpStatus.js';
 
 export const protect: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const authReq = req as AuthRequest;
@@ -33,10 +33,10 @@ export const protect: RequestHandler = (req: Request, res: Response, next: NextF
 
 export const authorize =
   (...roles: string[]) =>
-  (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      sendError(res, { message: 'Forbidden', status: HttpStatus.FORBIDDEN });
-      return;
-    }
-    next();
-  };
+    (req: AuthRequest, res: Response, next: NextFunction): void => {
+      if (!req.user || !roles.includes(req.user.role)) {
+        sendError(res, { message: 'Forbidden', status: HttpStatus.FORBIDDEN });
+        return;
+      }
+      next();
+    };

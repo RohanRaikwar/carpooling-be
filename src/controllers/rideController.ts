@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import Ride from '../models/Ride';
+import Ride from '../models/Ride.js';
 
 export const createRide = async (req: Request, res: Response) => {
     try {

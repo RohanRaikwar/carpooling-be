@@ -1,8 +1,8 @@
 import express from 'express';
-import * as userController from './user.controller';
-import { validate } from '../../middlewares/index';
-import { uploadSingleImage } from '../../middlewares/upload.middleware';
-import * as schemas from './user.validators';
+import * as userController from './user.controller.js';
+import { validate } from '../../middlewares/index.js';
+import { uploadSingleImage } from '../../middlewares/upload.middleware.js';
+import * as schemas from './user.validators.js';
 
 const router = express.Router();
 

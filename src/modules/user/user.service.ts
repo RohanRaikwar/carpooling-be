@@ -125,4 +125,3 @@ export const updateAvatarService = async (userId: string, avatarUrl: string) => 
     return { success: false, reason: 'Internal server error' };
   }
 };
-

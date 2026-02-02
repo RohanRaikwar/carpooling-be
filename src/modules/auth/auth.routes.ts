@@ -1,8 +1,8 @@
 import express from 'express';
-import * as authController from './auth.controller';
-import { validate } from '../../middlewares/validate';
-import * as schemas from './auth.validator';
-
+import * as authController from './auth.controller.js';
+import { validate } from '../../middlewares/validate.js';
+import * as schemas from './auth.validator.js';
+import { asyncHandler } from '../../utils/index.js';
 const router = express.Router();
 
 router.post('/signup', validate({ body: schemas.signupSchema }), authController.signup);

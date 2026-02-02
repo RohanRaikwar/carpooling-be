@@ -14,7 +14,7 @@ import connectDB from './config/database.js';
 import { protect, errorHandler } from './middlewares/index.js';
 
 const app = express();
-connectDB();
+// connectDB();
 
 app.use(cors());
 app.use(helmet());

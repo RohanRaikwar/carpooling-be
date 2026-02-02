@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import * as VehicleService from './vehicle.service';
-import { AuthRequest } from '../../middlewares/authMiddleware';
-import { sendSuccess, sendError, HttpStatus } from '../../utils/index';
-import { uploadToS3 } from '../../services/s3.service';
-import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service';
+import * as VehicleService from './vehicle.service.js';
+import { AuthRequest } from '../../middlewares/authMiddleware.js';
+import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
+import { uploadToS3 } from '../../services/s3.service.js';
+import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service.js';
 
 /* ================= CREATE VEHICLE ================= */
 export const createVehicle = async (req: AuthRequest, res: Response) => {

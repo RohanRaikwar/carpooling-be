@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { googleService } from './google.service';
+import { googleService } from './google.service.js';
 import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 
 export const googleController = {

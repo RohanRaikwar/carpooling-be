@@ -4,10 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev:server": "nodemon --watch 'src/**/*.ts' --exec \"node --loader ts-node/esm src/server.ts\"",
-    "dev:worker": "nodemon --watch 'src/**/*.ts' --exec \"node --loader ts-node/esm src/modules/mail/mail.worker.ts\"",
+    "dev:server": "nodemon --watch 'src/**/*.ts' --exec 'node --loader ts-node/esm' src/server.ts",
+    "dev:worker": "nodemon --watch 'src/**/*.ts' --exec 'node --loader ts-node/esm' src/modules/mail/mail.worker.ts",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:worker\"",
-    "build": "tsc && npm run prisma:generate",
+    "build": "tsc && prisma generate",
     "start": "NODE_ENV=production node dist/server.js",
     "start:worker": "NODE_ENV=production node dist/modules/mail/mail.worker.js",
     "prisma:generate": "prisma generate",
@@ -50,7 +50,7 @@
     "redis": "^5.10.0",
     "socket.io": "^4.8.1",
     "uuid": "^8.3.2",
-    "winston": "^3.18.3",
+    "winston": "^3.19.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

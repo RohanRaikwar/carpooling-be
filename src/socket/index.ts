@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
-import logger from '../utils/logger';
+import logger from '../utils/logger.js';
 import http from 'http';
 
 export const initSocket = async (server: http.Server) => {

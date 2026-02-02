@@ -1,5 +1,5 @@
 import redis from '../../cache/redis.js';
-import { OTP_EXPIRY_MINUTES, OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_SEC } from './otp.constants';
+import { OTP_EXPIRY_MINUTES, OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_SEC } from './otp.constants.js';
 
 const otpKey = (identifier: string, purpose: string, method: string) =>
   `otp:${purpose}:${identifier}:${method}`;

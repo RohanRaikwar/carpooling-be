@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq';
-import transporter from '../../config/mailer';
-import { bullRedis } from '../../queue/redisConnection';
-import { SendMailPayload } from './mail.types';
+import transporter from '../../config/mailer.js';
+import { bullRedis } from '../../queue/redisConnection.js';
+import { SendMailPayload } from './mail.types.js';
 
 console.log('📨 Mail worker booting...');
 

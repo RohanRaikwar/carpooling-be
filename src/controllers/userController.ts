@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import * as Models from '../models';
-import { AuthRequest } from '../types/auth';
-import * as enums from '../constants/enums';
+import * as Models from '../models/index.js';
+import { AuthRequest } from '../types/auth.js';
+import * as enums from '../constants/enums.js';
 
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {

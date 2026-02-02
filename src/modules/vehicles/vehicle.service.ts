@@ -1,4 +1,4 @@
-import { prisma } from '../../config/index';
+import { prisma } from '../../config/index.js';
 import { VehicleType } from '@prisma/client';
 
 type UpdateVehicleDetailsInput = {

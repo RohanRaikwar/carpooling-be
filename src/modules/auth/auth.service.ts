@@ -2,7 +2,7 @@ import { prisma } from '../../config/index.js';
 import { generateTokens, verifyRefreshToken } from '../token/tokens.service.js';
 import { Role } from '../user/user.constants.js';
 
-/**
+/** 
  * Signup Service
  */
 export const signupService = async (method: string, identifier: string) => {

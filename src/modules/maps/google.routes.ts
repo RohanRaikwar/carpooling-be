@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { googleController } from './google.controller';
-import { validate } from '../../middlewares/validate';
+import { googleController } from './google.controller.js';
+import { validate } from '../../middlewares/validate.js';
 import {
   computeRouteSchema,
   multiRouteSchema,
@@ -8,7 +8,7 @@ import {
   snapRoadsSchema,
   autocompleteSchema,
   placeDetailsSchema,
-} from './google.validator';
+} from './google.validator.js';
 
 const router = Router();
 

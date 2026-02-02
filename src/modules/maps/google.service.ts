@@ -1,10 +1,10 @@
 // google.service.ts
-import { googleHttp } from './google.http';
-import { RouteRequest, RoadsRequest, GeolocationRequest, MultiRouteRequest } from './google.types';
-import { clusterStops } from './google.cluster';
-import redis from '../../cache/redis';
+import { googleHttp } from './google.http.js';
+import { RouteRequest, RoadsRequest, GeolocationRequest, MultiRouteRequest } from './google.types.js';
+import { clusterStops } from './google.cluster.js';
+import redis from '../../cache/redis.js';
 import polyline from '@mapbox/polyline';
-import { createCircuitBreaker } from '../../middlewares/circuitBreaker';
+import { createCircuitBreaker } from '../../middlewares/circuitBreaker.js';
 const routesBreaker = createCircuitBreaker(googleHttp.routes);
 
 /**

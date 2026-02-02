@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { IUser } from '../models/users.model';
-import RefreshToken from '../models/refreshtoken.model';
-import logger from '../utils/logger';
+import { IUser } from '../models/users.model.js';
+import RefreshToken from '../models/refreshtoken.model.js';
+import logger from '../utils/logger.js';
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'access_secret';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh_secret';

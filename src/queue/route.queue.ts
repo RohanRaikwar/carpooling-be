@@ -1,6 +1,6 @@
 import { Queue, Worker } from 'bullmq';
-import { googleService } from '../modules/maps/google.service';
-import { bullRedis } from './redisConnection';
+import { googleService } from '../modules/maps/google.service.js';
+import { bullRedis } from './redisConnection.js';
 
 export const routeQueue = new Queue('route-optimization', { connection: bullRedis });
 

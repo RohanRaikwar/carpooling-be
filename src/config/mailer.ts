@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import logger from '../utils/logger';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -22,10 +21,7 @@ export const verifyMailer = async (): Promise<void> => {
       pass: process.env.MAIL_PASS,
     });
     await transporter.verify();
-    logger.info('Mailer connected successfully');
-  } catch (error) {
-    logger.error('Mailer connection failed', error);
-  }
+  } catch (error) {}
 };
 
 export default transporter;

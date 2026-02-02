@@ -1,6 +1,6 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
-import s3 from "../config/s3.config";
+import s3 from "../config/s3.config.js";
 
 export interface S3UploadResult {
     success: boolean;

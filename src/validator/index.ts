@@ -1,3 +1,3 @@
-import { emailSchema } from './email';
+import { emailSchema } from './email.js';
 
 export { emailSchema };

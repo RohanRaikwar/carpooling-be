@@ -1,11 +1,11 @@
-import { sendMail } from './mail.service';
-import { SendMailPayload } from './mail.types';
+import { sendMail } from './mail.service.js';
+import { SendMailPayload } from './mail.types.js';
 import {
   signupOtpTemplate,
   loginOtpTemplate,
   resetOtpTemplate,
   signupWelcomeTemplate,
-} from './mail.templates';
+} from './mail.templates.js';
 
 export default {
   sendMail,

@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { Tokens, DecodedToken } from './tokens.types';
+import { Tokens, DecodedToken } from './tokens.types.js';
 import { RefreshToken } from '../../models/index.js';
 import { prisma } from '../../config/index.js';
 
@@ -8,7 +8,7 @@ import {
   REFRESH_TOKEN_SECRET,
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
-} from './tokens.constants';
+} from './tokens.constants.js';
 
 /**
  * Generate JWT access and refresh tokens

@@ -1,5 +1,8 @@
 import { Schema, model, Document } from 'mongoose';
-import { Chattiness, PetsPreference } from '../modules/travel-preferences/travelPreference.types.js';
+import {
+  Chattiness,
+  PetsPreference,
+} from '../modules/travel-preferences/travelPreference.types.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface TravelPreferenceDocument extends Document {

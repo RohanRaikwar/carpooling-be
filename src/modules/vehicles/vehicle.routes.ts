@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { uploadSingleImage } from '../../middlewares/upload.middleware.js';
 import { validate } from '../../middlewares/validate.js';
-import * as controller from './vehicle.controller';
+import * as controller from './vehicle.controller.js';
 import {
   createVehicleSchema,
   updateVehicleDetailsSchema,
   imageUploadSchema,
-} from './vehicle.validator';
+} from './vehicle.validator.js';
 
 const router = Router();
 

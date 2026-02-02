@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Chattiness, PetsPreference } from './travelPreference.types';
+import { Chattiness, PetsPreference } from './travelPreference.types.js';
 
 export const travelPreferenceSchema = z.object({
   chattiness: z.nativeEnum(Chattiness).describe('Chattiness is required'),

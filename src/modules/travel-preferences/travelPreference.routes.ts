@@ -1,9 +1,9 @@
 import { RequestHandler, Router } from 'express';
-import { saveTravelPreference, getTravelPreference } from './travelPreference.controller';
+import { saveTravelPreference, getTravelPreference } from './travelPreference.controller.js';
 import { validate } from '../../middlewares/validate.js';
-import { travelPreferenceSchema } from './travelPreference.validator';
-import { asyncHandler } from '../../utils/index';
-import { AuthRequest } from '../../types/auth';
+import { travelPreferenceSchema } from './travelPreference.validator.js';
+import { asyncHandler } from '../../utils/index.js';
+import { AuthRequest } from '../../types/auth.js';
 
 const router = Router();
 

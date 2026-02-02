@@ -1,5 +1,5 @@
-import { SendMailPayload } from './mail.types';
-import { mailQueue } from './mail.queue';
+import { SendMailPayload } from './mail.types.js';
+import { mailQueue } from './mail.queue.js';
 
 export const sendMail = async (payload: SendMailPayload) => {
   const result = await mailQueue.add('send-mail', payload, {
