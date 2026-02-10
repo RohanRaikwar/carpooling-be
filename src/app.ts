@@ -8,13 +8,14 @@ import {
   vehiclesRouter,
   mapRouter,
   userRouter,
+  publishRideRouter,
+  searchRideRouter,
+  rideBookingRouter,
 } from './modules/index.js';
-import rideRoutes from './routes/rideRoutes.js';
-import connectDB from './config/database.js';
-import { protect, errorHandler } from './middlewares/index.js';
 
+import { protect, errorHandler } from './middlewares/index.js';
 const app = express();
-// connectDB();
+
 
 app.use(cors());
 app.use(helmet());
@@ -27,7 +28,9 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', protect, userRouter);
-app.use('/api/v1/rides', rideRoutes);
+app.use('/api/v1/publish-ride', protect, publishRideRouter);
+app.use('/api/v1/search-rides', searchRideRouter);
+app.use('/api/v1/bookings', protect, rideBookingRouter);
 app.use('/api/v1/vehicles', protect, vehiclesRouter);
 app.use('/api/v1/travel-preferences', protect, travelPreferenceRouter);
 app.use('/api/v1/maps', protect, mapRouter);

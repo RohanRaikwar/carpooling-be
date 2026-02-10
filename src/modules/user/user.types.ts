@@ -1,7 +1,90 @@
 import { Request } from 'express';
+import { Salutation, OnboardingStatus, Chattiness, PetsPreference, VehicleType } from '@prisma/client';
+
+// Auth request interface
 export interface AuthRequest extends Request {
   user: {
     id: string;
     role: string;
   };
+}
+
+// ====================== PROFILE RESPONSE TYPES ======================
+
+// Email/Phone with verification status
+export interface ContactInfo {
+  value: string | null;
+  isVerified: boolean;
+}
+
+// User basic info (core profile data)
+export interface UserBasicInfo {
+  id: string;
+  name: string | null;
+  nickName: string | null;
+  salutation: Salutation | null;
+  dob: Date | null;
+  email: ContactInfo;
+  phone: ContactInfo;
+  avatarUrl: string | null;
+  onboardingStatus: OnboardingStatus;
+  isVerified: boolean;
+  createdAt: Date;
+}
+
+// Travel preference data
+export interface TravelPreferenceData {
+  id: string;
+  chattiness: Chattiness;
+  pets: PetsPreference;
+}
+
+// Vehicle summary for profile
+export interface VehicleSummary {
+  id: string;
+  brand: string | null;
+  model_num: string | null;
+  type: VehicleType | null;
+  color: string | null;
+  imageUrl: string | null;
+  isVerified: boolean;
+}
+
+// User statistics
+export interface UserStats {
+  totalRides: number;       // Rides as driver
+  totalBookings: number;    // Bookings as passenger
+  memberSince: Date;
+}
+
+// Complete profile response
+export interface FullProfileResponse {
+  user: UserBasicInfo;
+  travelPreference: TravelPreferenceData | null;
+  vehicle: VehicleSummary | null;  // Single vehicle (users can only have one)
+  stats: UserStats;
+}
+
+// ====================== UPDATE PROFILE INPUT TYPES ======================
+
+// Travel preference update input
+export interface TravelPreferenceInput {
+  chattiness?: Chattiness;
+  pets?: PetsPreference;
+}
+
+// Profile update input
+export interface UpdateProfileInput {
+  name?: string;
+  nickName?: string;
+  salutation?: Salutation;
+  dob?: string;
+  travelPreference?: TravelPreferenceInput;
+}
+
+// Service response types
+export interface ServiceResult<T> {
+  success: boolean;
+  data?: T;
+  reason?: string;
 }

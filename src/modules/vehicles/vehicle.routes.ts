@@ -11,13 +11,18 @@ import {
 const router = Router();
 
 router.post('/', validate({ body: createVehicleSchema }), controller.createVehicle);
-router.put('/:id', validate({ body: createVehicleSchema }), controller.createVehicle);
+router.post(
+  '/upload',
+  uploadSingleImage,
+  validate({ file: imageUploadSchema }),
+  controller.uploadVehicleImageOnly,
+);
+router.post('/:id', validate({ body: createVehicleSchema }), controller.createVehicle);
 router.put(
   '/:id/update-details',
   validate({ body: updateVehicleDetailsSchema }),
   controller.updateVehicleDetails,
 );
-
 router.post(
   '/:id/image',
   uploadSingleImage,
@@ -25,6 +30,7 @@ router.post(
   controller.uploadImage,
 );
 
+router.get('/', controller.getVehicle);
 router.get('/:id', controller.getVehicle);
 router.delete('/:id', controller.deleteVehicle);
 

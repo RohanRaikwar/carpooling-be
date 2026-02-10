@@ -34,7 +34,7 @@ export const verifyOtp = async (
 ) => {
   const key = otpKey(identifier, purpose, method);
   const data = await redis.get(key);
-  console.log(data);
+  console.log(data, identifier, purpose, method, key, "jhgfjhkcu");
 
   if (!data) return { success: false, reason: 'expired' };
 

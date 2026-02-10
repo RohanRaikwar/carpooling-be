@@ -40,5 +40,22 @@ export const avatarUploadSchema = z
   })
   .strict();
 
+// Full profile update schema with travel preferences
+export const fullProfileUpdateSchema = z.object({
+  // Basic info
+  name: z.string().min(2).max(50).optional(),
+  nickName: z
+    .string()
+    .min(3)
+    .max(30)
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores')
+    .optional(),
+  salutation: z.enum(['MR', 'MS', 'MRS', 'MX', 'OTHER']).optional(),
+  dob: z.string().refine((val) => !isNaN(Date.parse(val)), 'Date of birth must be a valid date').optional(),
 
-
+  // Travel preferences (inline update)
+  travelPreference: z.object({
+    chattiness: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+    pets: z.enum(['YES', 'NO', 'SOMETIMES']).optional(),
+  }).optional(),
+});

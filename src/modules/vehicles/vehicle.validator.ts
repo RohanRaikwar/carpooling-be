@@ -22,7 +22,8 @@ export const createVehicleSchema = z
 export const updateVehicleDetailsSchema = z
   .object({
     brand: z.string().trim().min(1, 'Brand is required'),
-    model_num: z.string().trim().min(1, 'Model No.is required'),
+    model_num: z.string().trim().min(1, 'Model No. is required'),
+    model_name: z.string().trim().min(1, 'Model name is required'),
     type: z.nativeEnum(VehicleType),
     color: z.string().trim().min(1, 'Color is required'),
     year: z

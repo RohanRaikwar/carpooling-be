@@ -3,14 +3,21 @@ import { AuthRequest } from '../../types/auth.js';
 import { HttpStatus, sendSuccess, sendError } from '../../utils/index.js';
 import { uploadToS3 } from '../../services/s3.service.js';
 import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service.js';
+import type { FullProfileResponse } from './user.types.js';
 
 import {
   getMeService,
+  getFullProfileService,
+  updateFullProfileService,
   completeOnBoardingStep1Service,
   updateProfileService,
   updateAvatarService,
 } from './user.service.js';
 
+// Cache TTL constants
+const PROFILE_CACHE_TTL = 300; // 5 minutes
+
+// ====================== GET ME (Basic) ======================
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user.id;
@@ -54,6 +61,109 @@ export const getMe = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// ====================== GET FULL PROFILE (Optimized) ======================
+/**
+ * GET /api/users/me/profile
+ * Returns complete profile with:
+ * - User basic info (email/phone as objects with verification status)
+ * - Travel preferences
+ * - Vehicles list
+ * - User stats
+ * 
+ * Features:
+ * - Redis caching with 5-min TTL
+ * - Single optimized DB query
+ * - Parallel stats aggregation
+ */
+export const getFullProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const cacheKey = cacheKeys.userProfile(userId);
+
+    // Try cache first
+    const cachedProfile = await getCache<FullProfileResponse>(cacheKey);
+    if (cachedProfile) {
+      return sendSuccess(res, {
+        status: HttpStatus.OK,
+        message: 'Profile fetched successfully (cached)',
+        data: cachedProfile,
+      });
+    }
+
+    // Cache miss - fetch from DB
+    const { success, data, reason } = await getFullProfileService(userId);
+
+    if (!success || !data) {
+      const status = reason === 'USER_NOT_FOUND' ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_ERROR;
+      return sendError(res, {
+        status,
+        message: reason || 'Failed to fetch profile',
+      });
+    }
+
+    // Cache the result
+    await setCache(cacheKey, data, PROFILE_CACHE_TTL);
+
+    return sendSuccess(res, {
+      status: HttpStatus.OK,
+      message: 'Profile fetched successfully',
+      data,
+    });
+  } catch (error) {
+    console.error('getFullProfile controller error:', error);
+    return sendError(res, {
+      status: HttpStatus.INTERNAL_ERROR,
+      message: 'Server error',
+      error,
+    });
+  }
+};
+
+// ====================== UPDATE FULL PROFILE (Transaction) ======================
+/**
+ * PUT /api/users/me/profile
+ * Updates profile and travel preferences atomically
+ * 
+ * Features:
+ * - Transaction for multi-table updates
+ * - Duplicate nickname check
+ * - Multi-key cache invalidation
+ */
+export const updateFullProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { success, data, reason } = await updateFullProfileService(userId, req.body);
+
+    if (!success || !data) {
+      const status = reason === 'USERNAME_EXISTS' ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
+      return sendError(res, {
+        status,
+        message: reason === 'USERNAME_EXISTS' ? 'Username already taken' : reason || 'Unable to update profile',
+      });
+    }
+
+    // Invalidate all related caches
+    await Promise.all([
+      deleteCache(cacheKeys.user(userId)),
+      deleteCache(cacheKeys.userProfile(userId)),
+    ]);
+
+    return sendSuccess(res, {
+      status: HttpStatus.OK,
+      message: 'Profile updated successfully',
+      data,
+    });
+  } catch (error) {
+    console.error('updateFullProfile controller error:', error);
+    return sendError(res, {
+      status: HttpStatus.INTERNAL_ERROR,
+      message: 'Server error',
+      error,
+    });
+  }
+};
+
+// ====================== ONBOARDING ======================
 export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user.id;
@@ -67,7 +177,10 @@ export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) =
     }
 
     // Invalidate user cache after update
-    await deleteCache(cacheKeys.user(userId));
+    await Promise.all([
+      deleteCache(cacheKeys.user(userId)),
+      deleteCache(cacheKeys.userProfile(userId)),
+    ]);
 
     return sendSuccess(res, {
       status: HttpStatus.OK,
@@ -89,6 +202,7 @@ export const completeOnBoardingStep1 = async (req: AuthRequest, res: Response) =
   }
 };
 
+// ====================== LEGACY UPDATE PROFILE ======================
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user.id;
@@ -104,7 +218,10 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     }
 
     // Invalidate user cache after update
-    await deleteCache(cacheKeys.user(userId));
+    await Promise.all([
+      deleteCache(cacheKeys.user(userId)),
+      deleteCache(cacheKeys.userProfile(userId)),
+    ]);
 
     return sendSuccess(res, {
       status: HttpStatus.OK,
@@ -121,6 +238,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// ====================== UPLOAD AVATAR ======================
 export const uploadAvatar = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
@@ -155,7 +273,10 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
     }
 
     // Invalidate user cache after update
-    await deleteCache(cacheKeys.user(userId));
+    await Promise.all([
+      deleteCache(cacheKeys.user(userId)),
+      deleteCache(cacheKeys.userProfile(userId)),
+    ]);
 
     return sendSuccess(res, {
       status: HttpStatus.OK,

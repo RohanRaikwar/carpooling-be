@@ -4,6 +4,7 @@ import { VehicleType } from '@prisma/client';
 type UpdateVehicleDetailsInput = {
   brand: string;
   model_num: string;
+  model_name: string;
   type: VehicleType;
   color: string;
   year: number;
@@ -85,6 +86,7 @@ export const updateVehicleDetailService = async (
     data: {
       brand: update.brand,
       model_num: update.model_num,
+      model_name: update.model_name,
       type: update.type,
       color: update.color,
       year: update.year,
@@ -119,20 +121,33 @@ export const updateVehicle = async (
 };
 
 /* ================= GET VEHICLE ================= */
-export const getVehicle = async (userId: string, vehicleId: string) => {
-  const vehicle = await prisma.vehicle.findFirst({
+export const getVehicle = async (userId: string, vehicleId?: string) => {
+  if (vehicleId) {
+    const vehicle = await prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        userId,
+        deletedAt: null,
+      },
+    });
+
+    if (!vehicle) {
+      throw new Error('VEHICLE_NOT_FOUND');
+    }
+
+    return vehicle;
+  }
+
+  // No vehicleId — return all vehicles for the user
+  const vehicles = await prisma.vehicle.findMany({
     where: {
-      id: vehicleId,
       userId,
       deletedAt: null,
     },
+    orderBy: { createdAt: 'desc' },
   });
 
-  if (!vehicle) {
-    throw new Error('VEHICLE_NOT_FOUND');
-  }
-
-  return vehicle;
+  return vehicles;
 };
 
 /* ================= DELETE (SOFT) ================= */

@@ -16,6 +16,7 @@ import {
   signupWelcomeTemplate,
 } from '../mail/mail.templates.js';
 import { createOtp, verifyOtp, resendOtp } from '../otp/otp.service.js';
+import { sendSms, signupOtpSmsTemplate, loginOtpSmsTemplate, resetOtpSmsTemplate } from '../sms/index.js';
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -39,16 +40,23 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
 
-    await sendMail({
-      to: identifier,
-      subject: 'Signup OTP',
-      html: signupOtpTemplate(code),
-    });
+    if (method === 'email') {
+      await sendMail({
+        to: identifier,
+        subject: 'Signup OTP',
+        html: signupOtpTemplate(code),
+      });
+    } else if (method === 'phone') {
+      await sendSms(identifier, signupOtpSmsTemplate(code));
+    }
 
     return sendSuccess(res, {
       status: HttpStatus.CREATED,
       message: 'Signup successful, verify OTP',
-      data: { next: 'verify_otp' },
+      data: {
+        next: 'verify_otp',
+        ...(process.env.NODE_ENV !== 'production' && { code }),
+      },
     });
   } catch (err: any) {
     if (err.message === 'USER_EXISTS') {
@@ -86,11 +94,16 @@ export const requestOtp = async (req: Request, res: Response) => {
         subject: 'Your OTP',
         html: resetOtpTemplate(code),
       });
+    } else if (method === 'phone') {
+      await sendSms(identifier, resetOtpSmsTemplate(code));
     }
 
     return sendSuccess(res, {
       message: 'OTP sent successfully',
-      data: { next: 'verify_otp' },
+      data: {
+        next: 'verify_otp',
+        ...(process.env.NODE_ENV !== 'production' && { code }),
+      },
     });
   } catch (err) {
     console.error('Request OTP error:', err);
@@ -100,13 +113,17 @@ export const requestOtp = async (req: Request, res: Response) => {
 export const verifyOtpCont = async (req: Request, res: Response) => {
   try {
     const { identifier, code, purpose, method } = req.body;
+    console.log(purpose, "purpose", req.body);
+
     const verifyResult = await verifyOtp(identifier, purpose, code, method);
+    console.log(verifyResult, 'verifyResult');
 
     if (!verifyResult.success) {
       let errorMessage: string;
       if (verifyResult.reason === 'expired') {
         errorMessage = 'OTP expired';
       } else if (verifyResult.reason === 'too_many_attempts') {
+
         errorMessage = 'Too many wrong attempts';
       } else {
         errorMessage = 'Invalid OTP';
@@ -178,14 +195,19 @@ export const login = async (req: Request, res: Response) => {
       await sendMail({
         to: identifier,
         subject: 'Login OTP',
-        html: signupOtpTemplate(code),
+        html: loginOtpSmsTemplate(code),
       });
-
-      return sendSuccess(res, {
-        message: 'OTP sent for login',
-        data: { next: 'verify_otp' },
-      });
+    } else if (method === 'phone') {
+      await sendSms(identifier, loginOtpSmsTemplate(code));
     }
+
+    return sendSuccess(res, {
+      message: 'OTP sent for login',
+      data: {
+        next: 'verify_otp',
+        ...(process.env.NODE_ENV !== 'production' && { code }),
+      },
+    });
   } catch (err) {
     console.error('Login error:', err);
     return sendError(res, { message: 'Server error' });
@@ -235,11 +257,17 @@ export const resendOtpCont = async (req: Request, res: Response) => {
         subject: 'Resend OTP',
         html: purpose === 'signup' ? signupOtpTemplate(result.otp) : loginOtpTemplate(result.otp),
       });
+    } else if (method === 'phone') {
+      const smsTemplate = purpose === 'signup' ? signupOtpSmsTemplate(result.otp) : loginOtpSmsTemplate(result.otp);
+      await sendSms(identifier, smsTemplate);
     }
 
     return sendSuccess(res, {
       message: result.reused ? 'OTP resent' : 'New OTP generated',
       status: HttpStatus.OK,
+      data: {
+        ...(process.env.NODE_ENV !== 'production' && { code: result.otp }),
+      },
     });
   } catch {
     return sendError(res, { message: 'Server error' });

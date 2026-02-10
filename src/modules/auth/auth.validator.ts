@@ -25,11 +25,12 @@ export const otpRequestSchema = z.object({
 });
 
 export const otpVerifySchema = z.object({
-  otpId: z.string().optional(),
   code: z.string().length(4),
   method: z.enum(['email', 'phone']),
   identifier: z.string(),
-});
+  purpose: z.enum(['signup', 'login', 'reset_password']),
+}).strict();
+
 
 export const loginSchema = z.object({
   method: z.enum(['email', 'phone']),

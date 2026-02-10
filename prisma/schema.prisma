@@ -52,8 +52,10 @@ model User {
   salutation Salutation?
   dob        DateTime?
 
-  email String? @unique
-  phone String? @unique
+  email         String?  @unique
+  phone         String?  @unique
+  emailVerified Boolean  @default(false)
+  phoneVerified Boolean  @default(false)
 
   avatarUrl String?
 
@@ -65,6 +67,8 @@ model User {
   travelPreference TravelPreference?
   vehicles         Vehicle[]
   refreshTokens    RefreshToken[]
+  rides            Ride[]
+  bookings         RideBooking[]     @relation("PassengerBookings")
 
   @@index([id])
 }
@@ -93,13 +97,15 @@ model Vehicle {
   licenseCountry String
   licenseNumber  String
 
-  brand     String?
-  model_num String?
-  type      VehicleType?
-  color     String?
-  year      Int?
-  imageUrl  String?
-  deletedAt DateTime?
+  brand      String?
+  model_num  String?
+  model_name String?
+  type       VehicleType?
+  color      String?
+  year       Int?
+  imageUrl   String?
+  isVerified Boolean      @default(false)
+  deletedAt  DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,4 +129,125 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ============ RIDE ENUMS ============
+enum RideStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WaypointType {
+  PICKUP
+  DROPOFF
+  STOPOVER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+// ============ RIDE MODELS ============
+model Ride {
+  id String @id @default(uuid())
+
+  driverId  String
+  driver    User    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicleId String?
+
+  // Origin details
+  originPlaceId  String
+  originAddress  String
+  originLat      Float
+  originLng      Float
+
+  // Destination details
+  destinationPlaceId  String
+  destinationAddress  String
+  destinationLat      Float
+  destinationLng      Float
+
+  // Encoded polyline for the selected route
+  routePolyline        String?
+  routeDistanceMeters  Int?
+  routeDurationSeconds Int?
+
+  // Schedule
+  departureDate DateTime @db.Date
+  departureTime String // HH:mm format
+
+  // Capacity & Pricing
+  totalSeats       Int
+  availableSeats   Int
+  basePricePerSeat Float
+  currency         String @default("GBP")
+
+  // Additional info
+  notes String?
+
+  status RideStatus @default(DRAFT)
+
+  // Relations
+  waypoints RideWaypoint[]
+  bookings  RideBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([driverId])
+  @@index([status])
+  @@index([departureDate])
+}
+
+model RideWaypoint {
+  id     String @id @default(uuid())
+  rideId String
+  ride   Ride   @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  placeId String
+  address String
+  lat     Float
+  lng     Float
+
+  // Type: PICKUP, DROPOFF, or STOPOVER
+  waypointType WaypointType
+
+  // Order of this waypoint in the route
+  orderIndex Int
+
+  // Optional custom price for this waypoint
+  pricePerSeat Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rideId])
+}
+
+model RideBooking {
+  id          String @id @default(uuid())
+  rideId      String
+  ride        Ride   @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  passengerId String
+  passenger   User   @relation("PassengerBookings", fields: [passengerId], references: [id], onDelete: Cascade)
+
+  pickupWaypointId  String?
+  dropoffWaypointId String?
+
+  seatsBooked Int   @default(1)
+  totalPrice  Float
+
+  status BookingStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rideId])
+  @@index([passengerId])
 }

@@ -13,19 +13,23 @@ export const validate =
 
     try {
       if (schemas.body) {
-        schemas.body.parse(req.body); // works for JSON & form-data
+        req.body = schemas.body.parse(req.body);
       }
 
       if (schemas.params) {
-        schemas.params.parse(req.params);
+        const parsed = schemas.params.parse(req.params);
+        Object.assign(req.params, parsed);
       }
 
       if (schemas.query) {
-        schemas.query.parse(req.query);
+        const parsed = schemas.query.parse(req.query);
+        // req.query is a getter-only property on IncomingMessage, so mutate in-place
+        Object.keys(req.query).forEach((k) => delete (req.query as any)[k]);
+        Object.assign(req.query, parsed);
       }
 
       if (schemas.file) {
-        schemas.file.parse(req.file); // multer single file
+        req.file = schemas.file.parse(req.file) as any;
       }
 
 

@@ -5,11 +5,32 @@ import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 import { uploadToS3 } from '../../services/s3.service.js';
 import { getCache, setCache, deleteCache, cacheKeys } from '../../services/cache.service.js';
 
-/* ================= CREATE VEHICLE ================= */
+/* ================= CREATE / UPDATE VEHICLE ================= */
 export const createVehicle = async (req: AuthRequest, res: Response) => {
   try {
     const { licenseCountry, licenseNumber } = req.body;
+    const vehicleId = req.params.id as string | undefined;
 
+    if (vehicleId) {
+      // Update existing vehicle
+      const vehicle = await VehicleService.updateCreateVehicle(
+        req.user.id,
+        vehicleId,
+        licenseCountry,
+        licenseNumber,
+      );
+
+      // Invalidate caches
+      await deleteCache(cacheKeys.vehicle(vehicleId));
+      await deleteCache(cacheKeys.userVehicles(req.user.id));
+
+      return sendSuccess(res, {
+        message: 'Vehicle updated successfully',
+        data: { vehicleId: vehicle.id },
+      });
+    }
+
+    // Create new vehicle
     const vehicle = await VehicleService.createVehicle(req.user.id, licenseCountry, licenseNumber);
 
     // Invalidate user vehicles list cache
@@ -21,15 +42,21 @@ export const createVehicle = async (req: AuthRequest, res: Response) => {
       data: { vehicleId: vehicle.id },
     });
   } catch (error: any) {
+    console.log(error);
+
     return sendError(res, {
       status:
         error.message === 'MAX_VEHICLE_LIMIT_REACHED'
           ? HttpStatus.CONFLICT
-          : HttpStatus.INTERNAL_ERROR,
+          : error.message === 'VEHICLE_NOT_FOUND'
+            ? HttpStatus.NOT_FOUND
+            : HttpStatus.INTERNAL_ERROR,
       message:
         error.message === 'MAX_VEHICLE_LIMIT_REACHED'
           ? 'Maximum vehicle limit reached'
-          : 'Failed to create vehicle',
+          : error.message === 'VEHICLE_NOT_FOUND'
+            ? 'Vehicle not found'
+            : 'Failed to process vehicle',
     });
   }
 };
@@ -42,6 +69,7 @@ export const updateVehicleDetails = async (req: AuthRequest, res: Response) => {
     await VehicleService.updateVehicleDetailService(req.user.id, vehicleId, {
       brand: req.body.brand,
       model_num: req.body.model_num,
+      model_name: req.body.model_name,
       type: req.body.type,
       color: req.body.color,
       year: req.body.year,
@@ -63,7 +91,7 @@ export const updateVehicleDetails = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/* ================= UPLOAD IMAGE ================= */
+/* ================= UPLOAD IMAGE AND UPDATE VEHICLE ================= */
 export const uploadImage = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
@@ -79,20 +107,20 @@ export const uploadImage = async (req: AuthRequest, res: Response) => {
     if (!uploadResult.success) {
       return sendError(res, {
         status: HttpStatus.INTERNAL_ERROR,
-        message: 'Failed to upload image',
+        message: uploadResult.error || 'Failed to upload image',
       });
     }
 
-    const imageUrl = uploadResult.url;
+    const imageUrl = uploadResult.url!;
 
-    const data = await VehicleService.updateVehicle(req.user.id, vehicleId, {
+    const result = await VehicleService.updateVehicle(req.user.id, vehicleId, {
       imageUrl,
     });
 
-    if (!data.success) {
+    if (!result.success) {
       return sendError(res, {
         status: HttpStatus.NOT_FOUND,
-        message: data.message,
+        message: result.message,
       });
     }
 
@@ -100,12 +128,56 @@ export const uploadImage = async (req: AuthRequest, res: Response) => {
     await deleteCache(cacheKeys.vehicle(vehicleId));
 
     return sendSuccess(res, {
-      message: 'Vehicle image uploaded successfully',
-      data
+      message: 'Vehicle image uploaded and updated successfully',
+      data: {
+        imageUrl,
+        vehicle: result.data
+      }
     });
   } catch (error) {
+    console.error('uploadImage error:', error);
     return sendError(res, {
       message: 'Failed to upload vehicle image',
+    });
+  }
+};
+
+/* ================= UPLOAD IMAGE ONLY (RETURNS URL) ================= */
+export const uploadVehicleImageOnly = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return sendError(res, {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Image file required',
+      });
+    }
+
+    // Upload to S3
+    const uploadResult = await uploadToS3({
+      folder: 'vehicle',
+      file: req.file,
+    });
+
+    if (!uploadResult.success) {
+      return sendError(res, {
+        status: HttpStatus.INTERNAL_ERROR,
+        message: uploadResult.error || 'Failed to upload image to S3',
+      });
+    }
+
+    return sendSuccess(res, {
+      status: HttpStatus.OK,
+      message: 'Image uploaded successfully',
+      data: {
+        imageUrl: uploadResult.url,
+        key: uploadResult.key
+      },
+    });
+  } catch (error) {
+    console.error('uploadVehicleImageOnly error:', error);
+    return sendError(res, {
+      status: HttpStatus.INTERNAL_ERROR,
+      message: 'Server error during image upload',
     });
   }
 };
@@ -113,27 +185,29 @@ export const uploadImage = async (req: AuthRequest, res: Response) => {
 /* ================= GET VEHICLE ================= */
 export const getVehicle = async (req: AuthRequest, res: Response) => {
   try {
-    const vehicleId = req.params.id as string;
-    const cacheKey = cacheKeys.vehicle(vehicleId);
+    const vehicleId = req.params.id as string | undefined;
+    const cacheKey = vehicleId
+      ? cacheKeys.vehicle(vehicleId)
+      : cacheKeys.userVehicles(req.user.id);
 
     // Try cache first
-    const cachedVehicle = await getCache(cacheKey);
-    if (cachedVehicle) {
+    const cached = await getCache(cacheKey);
+    if (cached) {
       return sendSuccess(res, {
-        message: 'Vehicle fetched successfully',
-        data: cachedVehicle,
+        message: vehicleId ? 'Vehicle fetched successfully' : 'Vehicles fetched successfully',
+        data: cached,
       });
     }
 
     // Cache miss - fetch from DB
-    const vehicle = await VehicleService.getVehicle(req.user.id, vehicleId);
+    const data = await VehicleService.getVehicle(req.user.id, vehicleId);
 
     // Cache the result
-    await setCache(cacheKey, vehicle);
+    await setCache(cacheKey, data);
 
     return sendSuccess(res, {
-      message: 'Vehicle fetched successfully',
-      data: vehicle,
+      message: vehicleId ? 'Vehicle fetched successfully' : 'Vehicles fetched successfully',
+      data,
     });
   } catch (error: any) {
     return sendError(res, {
