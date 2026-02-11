@@ -44,6 +44,13 @@ enum VehicleType {
   truck
 }
 
+enum DocumentType {
+  VEHICLE_IMAGE
+  VEHICLE_DOCUMENT
+  DRIVING_LICENSE
+  INSURANCE_DOCUMENT
+}
+
 model User {
   id String @id @default(uuid())
 
@@ -103,15 +110,29 @@ model Vehicle {
   type       VehicleType?
   color      String?
   year       Int?
-  imageUrl   String?
+  imageUrl     String?
   isVerified Boolean      @default(false)
   deletedAt  DateTime?
+
+  documents VehicleDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, deletedAt])
+}
+
+model VehicleDocument {
+  id           String       @id @default(uuid())
+  vehicleId    String
+  vehicle      Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  imageUrl     String
+  documentType DocumentType
+
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId])
 }
 
 model RefreshToken {

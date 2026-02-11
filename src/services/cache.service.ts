@@ -63,5 +63,6 @@ export const cacheKeys = {
     userProfile: (userId: string) => `user:${userId}:profile`,
     vehicle: (vehicleId: string) => `vehicle:${vehicleId}`,
     userVehicles: (userId: string) => `user:${userId}:vehicles`,
+    vehicleDraft: (userId: string) => `vehicleDraft:${userId}`,
 };
 

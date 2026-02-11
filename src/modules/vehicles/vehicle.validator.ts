@@ -1,4 +1,4 @@
-import { VehicleType } from '@prisma/client';
+import { VehicleType, DocumentType } from '@prisma/client';
 import { z } from 'zod';
 
 /**
@@ -86,5 +86,45 @@ export const imageUploadSchema = z
     mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']),
     buffer: z.instanceof(Buffer),
     size: z.number().max(5 * 1024 * 1024),
+  })
+  .strict();
+
+/* ================= DRAFT STEP SCHEMAS ================= */
+
+/**
+ * Step 1: License info (creates new draft, clears old)
+ */
+export const draftLicenseSchema = z
+  .object({
+    licenseCountry: z.string().trim().min(1, 'License country is required'),
+    licenseNumber: z.string().trim().min(1, 'License number is required'),
+  })
+  .strict();
+
+/**
+ * Step 2: Vehicle details (brand, model, type, color, year)
+ */
+export const draftVehicleDetailsSchema = z
+  .object({
+    brand: z.string().trim().min(1, 'Brand is required'),
+    model_num: z.string().trim().min(1, 'Model No. is required'),
+    model_name: z.string().trim().min(1, 'Model name is required'),
+    type: z.nativeEnum(VehicleType),
+    color: z.string().trim().min(1, 'Color is required'),
+    year: z
+      .number()
+      .int()
+      .min(1990, 'Year must be >= 1990')
+      .max(currentYear, `Year cannot be greater than ${currentYear}`),
+  })
+  .strict();
+
+/**
+ * Step 4: Image URL
+ */
+export const draftImageSchema = z
+  .object({
+    imageUrl: z.string().trim().url('Invalid image URL'),
+    documentType: z.nativeEnum(DocumentType),
   })
   .strict();

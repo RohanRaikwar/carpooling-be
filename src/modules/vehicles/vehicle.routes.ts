@@ -6,10 +6,23 @@ import {
   createVehicleSchema,
   updateVehicleDetailsSchema,
   imageUploadSchema,
+  draftLicenseSchema,
+  draftVehicleDetailsSchema,
 } from './vehicle.validator.js';
 
 const router = Router();
 
+/* ================= DRAFT FLOW (Redis only) ================= */
+router.post('/draft', validate({ body: draftLicenseSchema }), controller.createDraftWithLicense);
+router.put('/draft/vehicle-details', validate({ body: draftVehicleDetailsSchema }), controller.updateDraftVehicleDetails);
+router.post(
+  '/draft/upload-document',
+  uploadSingleImage,
+  controller.uploadDraftDocument,
+);
+router.post('/draft/save', controller.saveVehicleFromDraft);
+
+/* ================= EXISTING VEHICLE ROUTES ================= */
 router.post('/', validate({ body: createVehicleSchema }), controller.createVehicle);
 router.post(
   '/upload',

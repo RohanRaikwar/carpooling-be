@@ -1910,6 +1910,172 @@
       ]
     },
     {
+      "name": "Vehicle — Draft Wizard",
+      "item": [
+        {
+          "name": "Step 1: Create Draft (License)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"licenseCountry\": \"IN\",\n    \"licenseNumber\": \"DL-1420110012345\"\n}"
+            },
+            "url": {
+              "raw": "{{local_url}}/api/v1/vehicles/draft",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "draft"
+              ]
+            },
+            "description": "Step 1: Create a new vehicle draft with license info. Clears any existing draft for this user. Stored in Redis with 5-min TTL."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2: Update Vehicle Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"brand\": \"Nissan\",\n    \"model_num\": \"J12\",\n    \"model_name\": \"Magnite\",\n    \"type\": \"suv\",\n    \"color\": \"Red\",\n    \"year\": 2024\n}"
+            },
+            "url": {
+              "raw": "{{local_url}}/api/v1/vehicles/draft/vehicle-details",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "draft",
+                "vehicle-details"
+              ]
+            },
+            "description": "Step 2: Update brand, model, type, color, and year in the draft."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3: Upload Document (S3 + Redis)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "documentType",
+                  "value": "VEHICLE_IMAGE",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{local_url}}/api/v1/vehicles/draft/upload-document",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "draft",
+                "upload-document"
+              ]
+            },
+            "description": "Step 3: Upload an image/document to S3 and save its URL + type to the Redis draft. Call multiple times for each document type.\n\nAllowed documentType values: VEHICLE_IMAGE, VEHICLE_DOCUMENT, DRIVING_LICENSE, INSURANCE_DOCUMENT"
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4: Save Vehicle (Redis → DB)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/api/v1/vehicles/draft/save",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "draft",
+                "save"
+              ]
+            },
+            "description": "Step 4: Validate and save the draft vehicle to PostgreSQL. Returns the full vehicle with DB-generated id. Cleans up Redis draft."
+          },
+          "response": []
+        }
+      ],
+      "description": "4-step vehicle creation wizard. All draft steps use Redis (5-min TTL) — no DB writes until Save.\n\nFlow: License → Vehicle Details → Upload Image → Image & Document Type → Save"
+    },
+    {
       "name": "Vehicle",
       "item": [
         {
@@ -2031,7 +2197,7 @@
           "response": []
         },
         {
-          "name": "vehicle_mage_uplaod",
+          "name": "vehicle_image_upload",
           "request": {
             "auth": {
               "type": "bearer",
@@ -2051,15 +2217,14 @@
                 {
                   "key": "image",
                   "type": "file",
-                  "uuid": "d436e427-2124-4b54-95fa-23b4b94ca652",
-                  "src": "/home/agile/Pictures/Screenshots/Screenshot from 2026-02-02 21-57-19.png"
+                  "src": ""
                 }
               ]
             },
             "url": {
-              "raw": "{{base_url }}/api/v1/vehicles/{{vehicle_id}}/image",
+              "raw": "{{local_url}}/api/v1/vehicles/{{vehicle_id}}/image",
               "host": [
-                "{{base_url }}"
+                "{{local_url}}"
               ],
               "path": [
                 "api",
@@ -2088,9 +2253,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url }}/api/v1/vehicles/{{vehicle_id}}/",
+              "raw": "{{local_url}}/api/v1/vehicles/{{vehicle_id}}/",
               "host": [
-                "{{base_url }}"
+                "{{local_url}}"
               ],
               "path": [
                 "api",
