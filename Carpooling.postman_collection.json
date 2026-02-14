@@ -667,7 +667,7 @@
       "name": "Search Ride",
       "item": [
         {
-          "name": "Search Rides",
+          "name": "Advanced Search — COND_1 (Exact Match)",
           "request": {
             "auth": {
               "type": "noauth"
@@ -675,33 +675,367 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/search-ride?originLat=51.5074&originLng=-0.1278&destinationLat=53.4808&destinationLng=-2.2426&departureDate=2026-02-15&seatsRequired=2&radiusKm=10&sortBy=departure&sortOrder=asc&page=1&limit=10",
+              "raw": "{{local_url}}/api/v1/search-rides/advanced?originLat=27.1767&originLng=78.0081&destinationLat=28.6139&destinationLng=77.209&departureDate=2026-02-15&seatsRequired=1",
               "host": [
-                "{{base_url}}"
+                "{{local_url}}"
               ],
               "path": [
-                "search-ride"
+                "api",
+                "v1",
+                "search-rides",
+                "advanced"
               ],
               "query": [
                 {
                   "key": "originLat",
-                  "value": "51.5074",
-                  "description": "Origin latitude"
+                  "value": "27.1767",
+                  "description": "Rider origin latitude (Agra)"
                 },
                 {
                   "key": "originLng",
-                  "value": "-0.1278",
-                  "description": "Origin longitude"
+                  "value": "78.0081",
+                  "description": "Rider origin longitude (Agra)"
                 },
                 {
                   "key": "destinationLat",
-                  "value": "53.4808",
-                  "description": "Destination latitude"
+                  "value": "28.6139",
+                  "description": "Rider destination latitude (Delhi)"
                 },
                 {
                   "key": "destinationLng",
-                  "value": "-2.2426",
-                  "description": "Destination longitude"
+                  "value": "77.209",
+                  "description": "Rider destination longitude (Delhi)"
+                },
+                {
+                  "key": "departureDate",
+                  "value": "2026-02-15",
+                  "description": "Departure date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "seatsRequired",
+                  "value": "1",
+                  "description": "Number of seats needed (1-10)"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "10",
+                  "description": "Search radius in km (1-100, default 10)",
+                  "disabled": true
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "1000",
+                  "description": "Maximum price per seat",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "departure",
+                  "description": "Sort by: price, departure, distance",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "Sort order: asc, desc",
+                  "disabled": true
+                },
+                {
+                  "key": "userRoutePolyline",
+                  "value": "",
+                  "description": "Encoded polyline for alternative route matching",
+                  "disabled": true
+                },
+                {
+                  "key": "minSimilarity",
+                  "value": "0.75",
+                  "description": "Polyline similarity threshold 0-1 (default 0.75)",
+                  "disabled": true
+                },
+                {
+                  "key": "includeAlternates",
+                  "value": "true",
+                  "description": "Include alternate route matches (default true)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Advanced 4-condition geo-matching search (D_POINTS algorithm). Matches rider origin/destination against driver route points [Origin, W1, ..., Wn, Destination] within the configured radius.\n\n**Match Types:**\n- COND_1: Exact origin → destination\n- COND_2: Rider anywhere on route\n- COND_3: Waypoint → waypoint\n- COND_4: Waypoint → destination\n- ALT_ROUTE: Polyline similarity match\n\n**Scoring:** Base 1000, -50 per km distance, +100 exact match, +20 origin/dest bonuses."
+          },
+          "response": []
+        },
+        {
+          "name": "Advanced Search — COND_2 (Origin to Waypoint)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/api/v1/search-rides/advanced?originLat=27.1767&originLng=78.0081&destinationLat=27.8074&destinationLng=77.428&departureDate=2026-02-15&seatsRequired=1",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search-rides",
+                "advanced"
+              ],
+              "query": [
+                {
+                  "key": "originLat",
+                  "value": "27.1767",
+                  "description": "Rider origin latitude (Agra — matches driver origin)"
+                },
+                {
+                  "key": "originLng",
+                  "value": "78.0081",
+                  "description": "Rider origin longitude (Agra)"
+                },
+                {
+                  "key": "destinationLat",
+                  "value": "27.8074",
+                  "description": "Rider destination latitude (Kosi Kalan — driver waypoint)"
+                },
+                {
+                  "key": "destinationLng",
+                  "value": "77.428",
+                  "description": "Rider destination longitude (Kosi Kalan)"
+                },
+                {
+                  "key": "departureDate",
+                  "value": "2026-02-15",
+                  "description": "Departure date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "seatsRequired",
+                  "value": "1",
+                  "description": "Number of seats needed"
+                }
+              ]
+            },
+            "description": "Tests COND_2: Rider picks up at driver origin (Agra) and drops at a waypoint (Kosi Kalan). Expected: matchType=COND_2, score=1020."
+          },
+          "response": []
+        },
+        {
+          "name": "Advanced Search — COND_3 (Waypoint to Waypoint)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/api/v1/search-rides/advanced?originLat=27.4924&originLng=77.6737&destinationLat=27.8074&destinationLng=77.428&departureDate=2026-02-15&seatsRequired=1",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search-rides",
+                "advanced"
+              ],
+              "query": [
+                {
+                  "key": "originLat",
+                  "value": "27.4924",
+                  "description": "Rider origin latitude (Mathura — driver waypoint 1)"
+                },
+                {
+                  "key": "originLng",
+                  "value": "77.6737",
+                  "description": "Rider origin longitude (Mathura)"
+                },
+                {
+                  "key": "destinationLat",
+                  "value": "27.8074",
+                  "description": "Rider destination latitude (Kosi Kalan — driver waypoint 2)"
+                },
+                {
+                  "key": "destinationLng",
+                  "value": "77.428",
+                  "description": "Rider destination longitude (Kosi Kalan)"
+                },
+                {
+                  "key": "departureDate",
+                  "value": "2026-02-15",
+                  "description": "Departure date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "seatsRequired",
+                  "value": "1",
+                  "description": "Number of seats needed"
+                }
+              ]
+            },
+            "description": "Tests COND_3: Rider picks up at waypoint (Mathura) and drops at another waypoint (Kosi Kalan). Expected: matchType=COND_3, score=1000."
+          },
+          "response": []
+        },
+        {
+          "name": "Advanced Search — COND_4 (Waypoint to Destination)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/api/v1/search-rides/advanced?originLat=27.8074&originLng=77.428&destinationLat=28.6139&destinationLng=77.209&departureDate=2026-02-15&seatsRequired=1",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search-rides",
+                "advanced"
+              ],
+              "query": [
+                {
+                  "key": "originLat",
+                  "value": "27.8074",
+                  "description": "Rider origin latitude (Kosi Kalan — driver waypoint)"
+                },
+                {
+                  "key": "originLng",
+                  "value": "77.428",
+                  "description": "Rider origin longitude (Kosi Kalan)"
+                },
+                {
+                  "key": "destinationLat",
+                  "value": "28.6139",
+                  "description": "Rider destination latitude (Delhi — driver destination)"
+                },
+                {
+                  "key": "destinationLng",
+                  "value": "77.209",
+                  "description": "Rider destination longitude (Delhi)"
+                },
+                {
+                  "key": "departureDate",
+                  "value": "2026-02-15",
+                  "description": "Departure date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "seatsRequired",
+                  "value": "1",
+                  "description": "Number of seats needed"
+                }
+              ]
+            },
+            "description": "Tests COND_4: Rider picks up at waypoint (Kosi Kalan) and drops at driver destination (Delhi). Expected: matchType=COND_4, score=1020."
+          },
+          "response": []
+        },
+        {
+          "name": "Advanced Search — Proximity (~3km offset)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/api/v1/search-rides/advanced?originLat=27.19&originLng=78.02&destinationLat=28.63&destinationLng=77.23&departureDate=2026-02-15&seatsRequired=1",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search-rides",
+                "advanced"
+              ],
+              "query": [
+                {
+                  "key": "originLat",
+                  "value": "27.19",
+                  "description": "Rider origin ~2km from Agra"
+                },
+                {
+                  "key": "originLng",
+                  "value": "78.02",
+                  "description": "Rider origin ~2km from Agra"
+                },
+                {
+                  "key": "destinationLat",
+                  "value": "28.63",
+                  "description": "Rider destination ~3km from Delhi"
+                },
+                {
+                  "key": "destinationLng",
+                  "value": "77.23",
+                  "description": "Rider destination ~3km from Delhi"
+                },
+                {
+                  "key": "departureDate",
+                  "value": "2026-02-15",
+                  "description": "Departure date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "seatsRequired",
+                  "value": "1",
+                  "description": "Number of seats needed"
+                }
+              ]
+            },
+            "description": "Tests proximity matching: Rider is ~2km from driver origin and ~3km from driver destination. Expected: matchType=COND_1, score≈909 (distance penalties applied)."
+          },
+          "response": []
+        },
+        {
+          "name": "Basic Search Rides",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/api/v1/search-rides?originLat=27.1767&originLng=78.0081&destinationLat=28.6139&destinationLng=77.209&departureDate=2026-02-15&seatsRequired=1&radiusKm=10&sortBy=departure&sortOrder=asc&page=1&limit=10",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search-rides"
+              ],
+              "query": [
+                {
+                  "key": "originLat",
+                  "value": "27.1767",
+                  "description": "Origin latitude (Agra)"
+                },
+                {
+                  "key": "originLng",
+                  "value": "78.0081",
+                  "description": "Origin longitude (Agra)"
+                },
+                {
+                  "key": "destinationLat",
+                  "value": "28.6139",
+                  "description": "Destination latitude (Delhi)"
+                },
+                {
+                  "key": "destinationLng",
+                  "value": "77.209",
+                  "description": "Destination longitude (Delhi)"
                 },
                 {
                   "key": "departureDate",
@@ -711,12 +1045,12 @@
                 {
                   "key": "departureTime",
                   "value": "09:00",
-                  "description": "Departure time (HH:mm) - Optional",
+                  "description": "Departure time (HH:mm) — Optional",
                   "disabled": true
                 },
                 {
                   "key": "seatsRequired",
-                  "value": "2",
+                  "value": "1",
                   "description": "Number of seats needed (1-10)"
                 },
                 {
@@ -727,7 +1061,7 @@
                 },
                 {
                   "key": "maxPrice",
-                  "value": "30",
+                  "value": "500",
                   "description": "Maximum price per seat",
                   "disabled": true
                 },
@@ -756,7 +1090,7 @@
                 }
               ]
             },
-            "description": "Search for available rides. This is a public endpoint (no auth required)."
+            "description": "Basic ride search with bounding box filter. Public endpoint (no auth required)."
           },
           "response": []
         },
@@ -769,16 +1103,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/search-ride/{{ride_id}}",
+              "raw": "{{local_url}}/api/v1/search-rides/{{ride_id}}",
               "host": [
-                "{{base_url}}"
+                "{{local_url}}"
               ],
               "path": [
-                "search-ride",
+                "api",
+                "v1",
+                "search-rides",
                 "{{ride_id}}"
               ]
             },
-            "description": "Get detailed information about a specific ride. This is a public endpoint."
+            "description": "Get detailed information about a specific ride. Public endpoint."
           },
           "response": []
         },
@@ -788,12 +1124,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/search-ride/user/recent?limit=5",
+              "raw": "{{local_url}}/api/v1/search-rides/user/recent?limit=5",
               "host": [
-                "{{base_url}}"
+                "{{local_url}}"
               ],
               "path": [
-                "search-ride",
+                "api",
+                "v1",
+                "search-rides",
                 "user",
                 "recent"
               ],
@@ -821,15 +1159,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"originLat\": 51.5074,\n    \"originLng\": -0.1278,\n    \"destinationLat\": 53.4808,\n    \"destinationLng\": -2.2426,\n    \"departureDate\": \"2026-02-15\",\n    \"radiusKm\": 10\n}"
+              "raw": "{\n    \"originLat\": 27.1767,\n    \"originLng\": 78.0081,\n    \"destinationLat\": 28.6139,\n    \"destinationLng\": 77.209,\n    \"departureDate\": \"2026-02-15\",\n    \"radiusKm\": 10\n}"
             },
             "url": {
-              "raw": "{{base_url}}/search-ride/notify",
+              "raw": "{{local_url}}/api/v1/search-rides/notify",
               "host": [
-                "{{base_url}}"
+                "{{local_url}}"
               ],
               "path": [
-                "search-ride",
+                "api",
+                "v1",
+                "search-rides",
                 "notify"
               ]
             },
@@ -838,7 +1178,7 @@
           "response": []
         }
       ],
-      "description": "APIs for searching and discovering available rides"
+      "description": "APIs for searching and discovering available rides. Advanced search uses D_POINTS 4-condition geo-matching with scored results."
     },
     {
       "name": "Ride Booking",

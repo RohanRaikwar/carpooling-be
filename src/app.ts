@@ -11,6 +11,8 @@ import {
   publishRideRouter,
   searchRideRouter,
   rideBookingRouter,
+  chatRouter,
+  notificationRouter,
 } from './modules/index.js';
 
 import { protect, errorHandler } from './middlewares/index.js';
@@ -34,6 +36,8 @@ app.use('/api/v1/bookings', protect, rideBookingRouter);
 app.use('/api/v1/vehicles', protect, vehiclesRouter);
 app.use('/api/v1/travel-preferences', protect, travelPreferenceRouter);
 app.use('/api/v1/maps', protect, mapRouter);
+app.use('/api/v1/chat', protect, chatRouter);
+app.use('/api/v1/notifications', protect, notificationRouter);
 
 app.use(errorHandler);
 

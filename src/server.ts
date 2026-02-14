@@ -1,13 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import { verifyMailer } from './config/index.js';
-import http from 'http'; // Added: Import http module
+import http from 'http';
 import app from './app.js';
-// import connectDB from './config/database';
-// import { connectRedis } from './config/redis';
 import logger from './utils/logger.js';
-
-// import { initSocket } from './socket';
+import { initSocket } from './socket/index.js';
 
 const PORT = process.env.PORT || 3000;
 (async () => {
@@ -16,14 +13,10 @@ const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
-    // await connectDB();
-    // await connectRedis();
-
-    const server = http.createServer(app); // Changed: Create http server
-    // await initSocket(server); // Added: Initialize Socket.IO
+    const server = http.createServer(app);
+    await initSocket(server);
 
     server.listen(PORT, () => {
-      // Changed: Listen on the http server
       logger.info(`Server running on port ${PORT}`);
     });
   } catch (error) {

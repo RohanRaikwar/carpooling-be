@@ -9,6 +9,24 @@ import {
 import { DocumentType } from '@prisma/client';
 
 // ============================================================
+//  DRAFT RESPONSE HELPER (strip step/userId, add next)
+// ============================================================
+
+const NEXT_STEP: Record<number, string> = {
+    1: 'vehicle-details',
+    2: 'upload-document',
+    3: 'save',
+};
+
+export const formatDraftResponse = (draft: DraftVehicle) => {
+    const { userId, step, ...rest } = draft;
+    return {
+        ...rest,
+        next: NEXT_STEP[step] || null,
+    };
+};
+
+// ============================================================
 //  CONSTANTS
 // ============================================================
 

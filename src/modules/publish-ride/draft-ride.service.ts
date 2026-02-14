@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import redis from '../../cache/redis.js';
 import { prisma } from '../../config/index.js';
 import { RideStatus } from '@prisma/client';
@@ -26,24 +25,45 @@ import {
 //  CONSTANTS
 // ============================================================
 
-const DRAFT_TTL = 86400; // 24 hours in seconds
+const DRAFT_TTL = 3600; // 10 minutes
 const ROUTES_TTL = 300;  // 5 minutes for computed routes
 
 // ============================================================
 //  CACHE KEY HELPERS
 // ============================================================
 
-const draftKey = (userId: string, draftId: string) => `draft:${userId}:${draftId}`;
-const draftPattern = (userId: string) => `draft:${userId}:*`;
-const routesCacheKey = (draftId: string) => `draft:routes:${draftId}`;
+const draftKey = (userId: string) => `rideDraft:${userId}`;
+const routesCacheKey = (userId: string) => `rideDraft:routes:${userId}`;
+
+// ============================================================
+//  DRAFT RESPONSE HELPER (strip id/driverId/step, add next)
+// ============================================================
+
+const NEXT_STEP: Record<number, string> = {
+    1: 'destination',
+    4: 'compute-routes',
+    7: 'stopovers',
+    8: 'schedule',
+    9: 'capacity',
+    10: 'pricing',
+    12: 'notes',
+    13: 'publish',
+};
+
+export const formatDraftResponse = (draft: DraftRide) => {
+    const { userId, step, ...rest } = draft;
+    return {
+        ...rest,
+        next: NEXT_STEP[step] || null,
+    };
+};
 
 // ============================================================
 //  INTERNAL: READ / WRITE DRAFT
 // ============================================================
 
 interface DraftRide {
-    id: string;
-    driverId: string;
+    userId: string;
     step: number;
     createdAt: string;
     updatedAt: string;
@@ -91,8 +111,8 @@ interface DraftRide {
 /**
  * Get a draft from Redis. Throws if not found.
  */
-const getDraft = async (userId: string, draftId: string): Promise<DraftRide> => {
-    const key = draftKey(userId, draftId);
+const getDraft = async (userId: string): Promise<DraftRide> => {
+    const key = draftKey(userId);
     const data = await redis.get(key);
     if (!data) {
         throw new Error('DRAFT_NOT_FOUND');
@@ -103,8 +123,8 @@ const getDraft = async (userId: string, draftId: string): Promise<DraftRide> => 
 /**
  * Save (create/update) a draft to Redis with TTL refresh.
  */
-const saveDraft = async (userId: string, draft: DraftRide): Promise<DraftRide> => {
-    const key = draftKey(userId, draft.id);
+const saveDraft = async (draft: DraftRide): Promise<DraftRide> => {
+    const key = draftKey(draft.userId);
     draft.updatedAt = new Date().toISOString();
     await redis.setex(key, DRAFT_TTL, JSON.stringify(draft));
     return draft;
@@ -115,9 +135,12 @@ const saveDraft = async (userId: string, draft: DraftRide): Promise<DraftRide> =
 // ============================================================
 
 export const createWithOrigin = async (driverId: string, input: CreateOriginInput): Promise<DraftRide> => {
+    // Delete any existing draft for this user
+    await redis.del(draftKey(driverId));
+    await redis.del(routesCacheKey(driverId));
+
     const draft: DraftRide = {
-        id: uuidv4(),
-        driverId,
+        userId: driverId,
         step: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -127,7 +150,7 @@ export const createWithOrigin = async (driverId: string, input: CreateOriginInpu
         originLng: input.originLng,
     };
 
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -136,13 +159,12 @@ export const createWithOrigin = async (driverId: string, input: CreateOriginInpu
 
 export const updatePickups = async (
     driverId: string,
-    draftId: string,
     input: UpdatePickupsInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.pickups = input.pickups;
     draft.step = Math.max(draft.step, 2);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -151,16 +173,15 @@ export const updatePickups = async (
 
 export const updateDestination = async (
     driverId: string,
-    draftId: string,
     input: UpdateDestinationInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.destinationPlaceId = input.destinationPlaceId;
     draft.destinationAddress = input.destinationAddress;
     draft.destinationLat = input.destinationLat;
     draft.destinationLng = input.destinationLng;
     draft.step = Math.max(draft.step, 4);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -169,13 +190,12 @@ export const updateDestination = async (
 
 export const updateDropoffs = async (
     driverId: string,
-    draftId: string,
     input: UpdateDropoffsInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.dropoffs = input.dropoffs;
     draft.step = Math.max(draft.step, 5);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -184,10 +204,9 @@ export const updateDropoffs = async (
 
 export const computeRouteOptions = async (
     driverId: string,
-    draftId: string,
     includeAlternatives: boolean = true
 ): Promise<ComputeRoutesResult> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
 
     if (!draft.originLat || !draft.destinationLat) {
         throw new Error('ORIGIN_AND_DESTINATION_REQUIRED');
@@ -240,7 +259,7 @@ export const computeRouteOptions = async (
     });
 
     // Cache computed routes for selection (5 min)
-    await redis.setex(routesCacheKey(draftId), ROUTES_TTL, JSON.stringify(routes));
+    await redis.setex(routesCacheKey(driverId), ROUTES_TTL, JSON.stringify(routes));
 
     return {
         routes,
@@ -254,13 +273,12 @@ export const computeRouteOptions = async (
 
 export const selectRoute = async (
     driverId: string,
-    draftId: string,
     routeIndex: number
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
 
     // Get cached routes
-    const cachedData = await redis.get(routesCacheKey(draftId));
+    const cachedData = await redis.get(routesCacheKey(driverId));
     if (!cachedData) {
         throw new Error('ROUTES_EXPIRED');
     }
@@ -277,7 +295,7 @@ export const selectRoute = async (
     draft.routeDurationSeconds = selectedRoute.durationSeconds;
     draft.step = Math.max(draft.step, 7);
 
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -382,9 +400,8 @@ function samplePointsAlongRoute(
  */
 export const getStopoversAlongRoute = async (
     driverId: string,
-    draftId: string
 ): Promise<StopoverSuggestionsResult> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
 
     if (!draft.routePolyline) {
         throw new Error('ROUTE_REQUIRED_FOR_SUGGESTIONS');
@@ -480,13 +497,12 @@ export const getStopoversAlongRoute = async (
 
 export const updateStopovers = async (
     driverId: string,
-    draftId: string,
     input: UpdateStopoversInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.stopovers = input.stopovers;
     draft.step = Math.max(draft.step, 8);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -495,14 +511,13 @@ export const updateStopovers = async (
 
 export const updateSchedule = async (
     driverId: string,
-    draftId: string,
     input: UpdateScheduleInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.departureDate = new Date(input.departureDate).toISOString();
     draft.departureTime = input.departureTime;
     draft.step = Math.max(draft.step, 9);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -511,10 +526,9 @@ export const updateSchedule = async (
 
 export const updateCapacity = async (
     driverId: string,
-    draftId: string,
     input: UpdateCapacityInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
 
     // Auto-fetch user's vehicle
     const vehicle = await prisma.vehicle.findFirst({
@@ -527,7 +541,7 @@ export const updateCapacity = async (
     draft.vehicleId = vehicle?.id || null;
     draft.step = Math.max(draft.step, 10);
 
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -540,9 +554,8 @@ const PRICE_PER_KM = FUEL_PRICE_PER_LITER / FUEL_EFFICIENCY_KM_PER_LITER;
 
 export const getRecommendedPrice = async (
     driverId: string,
-    draftId: string
 ): Promise<PriceRecommendation & { stopoverPricing?: { placeId: string; address: string; distanceFromOriginKm: number; recommendedPrice: number }[] }> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
 
     if (!draft.routeDistanceMeters) {
         throw new Error('ROUTE_REQUIRED_FOR_PRICING');
@@ -600,13 +613,12 @@ export const getRecommendedPrice = async (
 
 export const updatePricing = async (
     driverId: string,
-    draftId: string,
     input: UpdatePricingInput
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.basePricePerSeat = input.basePricePerSeat;
     draft.step = Math.max(draft.step, 12);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
@@ -615,21 +627,20 @@ export const updatePricing = async (
 
 export const updateNotes = async (
     driverId: string,
-    draftId: string,
     notes: string
 ): Promise<DraftRide> => {
-    const draft = await getDraft(driverId, draftId);
+    const draft = await getDraft(driverId);
     draft.notes = notes;
     draft.step = Math.max(draft.step, 13);
-    return saveDraft(driverId, draft);
+    return saveDraft(draft);
 };
 
 // ============================================================
 //  STEP 14: PUBLISH — Move from Redis → DB
 // ============================================================
 
-export const publishRide = async (driverId: string, draftId: string) => {
-    const draft = await getDraft(driverId, draftId);
+export const publishRide = async (driverId: string) => {
+    const draft = await getDraft(driverId);
 
     // ---- Validation ---- //
     if (!draft.originPlaceId || !draft.destinationPlaceId) {
@@ -737,8 +748,8 @@ export const publishRide = async (driverId: string, draftId: string) => {
     });
 
     // ---- Cleanup: Remove draft + route cache from Redis ---- //
-    await redis.del(draftKey(driverId, draftId));
-    await redis.del(routesCacheKey(draftId));
+    await redis.del(draftKey(driverId));
+    await redis.del(routesCacheKey(driverId));
 
     return ride;
 };
@@ -748,77 +759,17 @@ export const publishRide = async (driverId: string, draftId: string) => {
 // ============================================================
 
 /**
- * List all drafts for a user from Redis
+ * Get the user's draft
  */
-export const listDrafts = async (
-    driverId: string,
-    query: ListDraftsQuery
-): Promise<{ drafts: DraftSummary[]; pagination: any }> => {
-    const { page = 1, limit = 10 } = query;
-    const pattern = draftPattern(driverId);
-
-    // Get all draft keys for this user
-    const keys = await redis.keys(pattern);
-
-    if (keys.length === 0) {
-        return {
-            drafts: [],
-            pagination: { page, limit, total: 0, totalPages: 0 },
-        };
-    }
-
-    // Fetch all drafts
-    const pipeline = redis.pipeline();
-    keys.forEach(k => pipeline.get(k));
-    const results = await pipeline.exec();
-
-    let allDrafts: DraftRide[] = [];
-    if (results) {
-        allDrafts = results
-            .filter(([err, data]) => !err && data)
-            .map(([, data]) => JSON.parse(data as string) as DraftRide)
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    }
-
-    // Paginate
-    const total = allDrafts.length;
-    const start = (page - 1) * limit;
-    const paginatedDrafts = allDrafts.slice(start, start + limit);
-
-    const drafts: DraftSummary[] = paginatedDrafts.map(draft => ({
-        id: draft.id,
-        originAddress: draft.originAddress || null,
-        destinationAddress: draft.destinationAddress || null,
-        departureDate: draft.departureDate ? new Date(draft.departureDate) : new Date(),
-        status: RideStatus.DRAFT,
-        createdAt: new Date(draft.createdAt),
-        updatedAt: new Date(draft.updatedAt),
-        completionPercentage: calculateDraftCompletion(draft),
-    }));
-
-    return {
-        drafts,
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-        },
-    };
+export const getUserDraft = async (driverId: string): Promise<DraftRide> => {
+    return getDraft(driverId);
 };
 
 /**
- * Get a single draft by ID
+ * Delete the user's draft from Redis
  */
-export const getDraftById = async (driverId: string, draftId: string): Promise<DraftRide> => {
-    return getDraft(driverId, draftId);
-};
-
-/**
- * Delete a draft from Redis
- */
-export const deleteDraft = async (driverId: string, draftId: string) => {
-    const key = draftKey(driverId, draftId);
+export const deleteDraft = async (driverId: string) => {
+    const key = draftKey(driverId);
     const exists = await redis.exists(key);
 
     if (!exists) {
@@ -826,7 +777,7 @@ export const deleteDraft = async (driverId: string, draftId: string) => {
     }
 
     await redis.del(key);
-    await redis.del(routesCacheKey(draftId));
+    await redis.del(routesCacheKey(driverId));
 
     return { deleted: true };
 };
