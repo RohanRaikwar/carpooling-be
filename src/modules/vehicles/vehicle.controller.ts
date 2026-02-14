@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import * as VehicleService from './vehicle.service.js';
 import * as DraftVehicleService from './draft-vehicle.service.js';
+import { formatDraftResponse } from './draft-vehicle.service.js';
 import { AuthRequest } from '../../middlewares/authMiddleware.js';
 import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 import { uploadToS3 } from '../../services/s3.service.js';
@@ -257,7 +258,7 @@ export const createDraftWithLicense = async (req: AuthRequest, res: Response) =>
     return sendSuccess(res, {
       status: HttpStatus.CREATED,
       message: 'Vehicle draft created successfully',
-      data: draft,
+      data: formatDraftResponse(draft),
     });
   } catch (error: any) {
     console.error('createDraftWithLicense error:', error);
@@ -284,7 +285,7 @@ export const updateDraftVehicleDetails = async (req: AuthRequest, res: Response)
 
     return sendSuccess(res, {
       message: 'Vehicle details updated in draft',
-      data: draft,
+      data: formatDraftResponse(draft),
     });
   } catch (error: any) {
     return sendError(res, {
@@ -339,7 +340,7 @@ export const uploadDraftDocument = async (req: AuthRequest, res: Response) => {
       data: {
         imageUrl: uploadResult.url,
         documentType,
-        draft,
+        draft: formatDraftResponse(draft),
       },
     });
   } catch (error: any) {

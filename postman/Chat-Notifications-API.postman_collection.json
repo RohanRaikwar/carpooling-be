@@ -1,0 +1,345 @@
+{
+    "info": {
+        "name": "Carpooling - Chat & Notifications API",
+        "description": "Chat module (1:1 messaging with booking authorization) and Notification module (in-app + push notifications) for the carpooling backend.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{accessToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "accessToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "conversationId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "receiverId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "notificationId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "deviceTokenId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "📨 Chat",
+            "description": "1:1 chat between rider and driver. Requires a CONFIRMED booking between the two users.",
+            "item": [
+                {
+                    "name": "List Conversations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat?limit=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat"
+                            ],
+                            "query": [
+                                {
+                                    "key": "cursor",
+                                    "value": "",
+                                    "description": "Cursor for pagination (conversation ID)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "20",
+                                    "description": "Number of conversations per page (1-50, default: 20)"
+                                }
+                            ]
+                        },
+                        "description": "Get paginated list of user's conversations with peer info, last message, and unread count."
+                    }
+                },
+                {
+                    "name": "Get Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/{{conversationId}}/messages?limit=30",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "{{conversationId}}",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "cursor",
+                                    "value": "",
+                                    "description": "Cursor for pagination (message ID)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "30",
+                                    "description": "Number of messages per page (1-100, default: 30)"
+                                }
+                            ]
+                        },
+                        "description": "Get paginated messages in a conversation (newest first). User must be a participant."
+                    }
+                },
+                {
+                    "name": "Send Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"receiverId\": \"{{receiverId}}\",\n  \"text\": \"Hey! I booked your ride. What's the pickup point?\",\n  \"clientMsgId\": \"msg_client_001\",\n  \"type\": \"TEXT\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "send"
+                            ]
+                        },
+                        "description": "Send a message to another user. Requires a CONFIRMED booking between sender and receiver.\n\nFields:\n- `receiverId` (required): UUID of the receiver\n- `text` (required): Message text (1-5000 chars)\n- `clientMsgId` (required): Client-side message ID for idempotency\n- `type` (optional): TEXT (default), IMAGE, FILE, SYSTEM\n- `payloadJson` (optional): Additional structured data\n\n**Error 403**: Chat is only available after a booking is confirmed between rider and driver."
+                    }
+                },
+                {
+                    "name": "Mark Messages as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"lastReadMessageId\": \"message-uuid-here\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/{{conversationId}}/read",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "{{conversationId}}",
+                                "read"
+                            ]
+                        },
+                        "description": "Mark all messages up to `lastReadMessageId` as read in a conversation."
+                    }
+                },
+                {
+                    "name": "Get Unread Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/unread-count",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "unread-count"
+                            ]
+                        },
+                        "description": "Get total unread message count across all conversations."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔔 Notifications",
+            "description": "In-app notifications with Redis-cached unread counts and FCM/APNs push for offline users.",
+            "item": [
+                {
+                    "name": "List Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/notifications?limit=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "notifications"
+                            ],
+                            "query": [
+                                {
+                                    "key": "cursor",
+                                    "value": "",
+                                    "description": "Cursor for pagination (notification ID)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "20",
+                                    "description": "Number of notifications per page (1-50, default: 20)"
+                                }
+                            ]
+                        },
+                        "description": "Get paginated list of notifications for the authenticated user (newest first)."
+                    }
+                },
+                {
+                    "name": "Mark Notifications as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"notificationIds\": [\n    \"{{notificationId}}\"\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/notifications/read",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "notifications",
+                                "read"
+                            ]
+                        },
+                        "description": "Mark one or more notifications as read.\n\nFields:\n- `notificationIds` (required): Array of notification UUIDs (1-100 items)\n\nInvalidates the Redis unread count cache."
+                    }
+                },
+                {
+                    "name": "Get Unread Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/notifications/unread-count",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "notifications",
+                                "unread-count"
+                            ]
+                        },
+                        "description": "Get unread notification count. Uses Redis cache (60s TTL) with DB fallback."
+                    }
+                },
+                {
+                    "name": "Register Device Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"platform\": \"android\",\n  \"token\": \"fcm_device_token_from_firebase_sdk\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/notifications/devices/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "notifications",
+                                "devices",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a device token for push notifications (FCM / APNs).\n\nFields:\n- `platform` (required): 'android' or 'ios'\n- `token` (required): Device token from Firebase SDK\n\nUpserts — if the token already exists, updates userId and lastSeenAt."
+                    }
+                },
+                {
+                    "name": "Remove Device Token",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/notifications/devices/{{deviceTokenId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "notifications",
+                                "devices",
+                                "{{deviceTokenId}}"
+                            ]
+                        },
+                        "description": "Remove a registered device token (e.g. on logout). Only the token owner can delete it."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔌 WebSocket Events Reference",
+            "description": "These are Socket.IO events, not REST endpoints. Connect via WebSocket with JWT auth token.\n\n**Connection:**\n```\nconst socket = io('http://localhost:3000', {\n  auth: { token: 'your-jwt-token' }\n});\n```\n\n**Chat Events (emit):**\n- `chat:send` — Send a message: `{ receiverId, text, clientMsgId, type? }`\n- `chat:typing` — Typing indicator: `{ conversationId, receiverId }`\n- `chat:stopTyping` — Stop typing: `{ conversationId, receiverId }`\n- `chat:delivered` — Delivery receipt: `{ messageId, conversationId }`\n- `chat:read` — Read receipt: `{ conversationId, lastReadMessageId }`\n- `chat:sync` — Sync missed messages: `{ lastMessageTs }`\n- `presence:ping` — Heartbeat\n- `presence:check` — Check user status: `{ userId }`\n\n**Chat Events (listen):**\n- `chat:message` — New message received\n- `chat:typing` — Peer is typing\n- `chat:stopTyping` — Peer stopped typing\n- `chat:delivered` — Message delivered\n- `chat:read` — Messages read\n- `chat:sync` — Missed messages batch\n- `presence:status` — User online/offline status\n\n**Notification Events (listen):**\n- `notification:new` — Real-time notification preview",
+            "item": []
+        }
+    ]
+}

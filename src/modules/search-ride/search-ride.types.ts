@@ -140,73 +140,61 @@ export interface NotifyRideRequest {
     radiusKm?: number;
 }
 
-/* ================= ENHANCED SEARCH TYPES ================= */
+/* ================= ENHANCED SEARCH TYPES (SPEC §3-§10) ================= */
 
 /**
- * 4-Condition Match type classification for search results
+ * 4-Condition match types as defined in spec §3 + ALT_ROUTE (§4.3)
  *
- * C1: EXACT_MATCH       → Passenger origin ≤5km of driver origin + dest ≤5km of driver dest
- * C2: STOPOVER_PICKUP   → Passenger origin ≤5km of driver stopover + dest ≤5km of driver dest
- * C3: STOPOVER_DROPOFF  → Passenger origin ≤5km of driver origin + dest ≤5km of driver stopover
- * C4: ALTERNATE_ROUTE   → Cross-matching via stopovers/polyline with alternative routes
+ * COND_1: Exact Origin & Destination Match (Ro→Do, Rd→Dd)
+ * COND_2: Rider Points Match Anywhere on Route (i < j in D_POINTS)
+ * COND_3: Waypoint to Waypoint Match (Ro→Wi, Rd→Wj, i < j)
+ * COND_4: Waypoint to Destination Match (Ro→Wi, Rd→Dd)
+ * ALT_ROUTE: Alternative Route Match (polyline proximity)
  */
 export enum RideMatchType {
-    /** C1: Passenger origin → Driver origin, Passenger dest → Driver dest (both ≤ radiusKm) */
-    EXACT_MATCH = 'EXACT_MATCH',
-    /** C2: Passenger origin → Driver stopover, Passenger dest → Driver dest */
-    STOPOVER_PICKUP = 'STOPOVER_PICKUP',
-    /** C3: Passenger origin → Driver origin, Passenger dest → Driver stopover */
-    STOPOVER_DROPOFF = 'STOPOVER_DROPOFF',
-    /** C4: Alternative route match via cross-matched stopovers or polyline */
-    ALTERNATE_ROUTE = 'ALTERNATE_ROUTE',
+    COND_1 = 'COND_1',
+    COND_2 = 'COND_2',
+    COND_3 = 'COND_3',
+    COND_4 = 'COND_4',
+    ALT_ROUTE = 'ALT_ROUTE',
 }
 
-/**
- * Waypoint match information
- */
+/** A single point in the D_POINTS array */
+export interface DPoint {
+    index: number;
+    lat: number;
+    lng: number;
+    address: string;
+    /** 'ORIGIN' | 'WAYPOINT' | 'DEST' */
+    pointType: 'ORIGIN' | 'WAYPOINT' | 'DEST';
+}
+
+/** Spec §10 — Output response per matched ride */
+export interface MatchResult {
+    /** Best pickup D_POINTS index */
+    pickupIndex: number;
+    /** Best drop D_POINTS index */
+    dropIndex: number;
+    /** Which type of point was matched for pickup */
+    pickupMatchedPoint: 'ORIGIN' | 'WAYPOINT' | 'DEST';
+    /** Which type of point was matched for drop */
+    dropMatchedPoint: 'ORIGIN' | 'WAYPOINT' | 'DEST';
+    /** Distance from rider origin to matched pickup point (km) */
+    pickupDistanceKm: number;
+    /** Distance from rider destination to matched drop point (km) */
+    dropDistanceKm: number;
+    /** Match type classification */
+    matchType: RideMatchType;
+    /** Score per spec §8 */
+    score: number;
+}
+
+/** Waypoint match diagnostic info */
 export interface WaypointMatch {
     waypointId: string;
     waypointAddress: string;
     distanceKm: number;
     matchType: 'PICKUP' | 'DROPOFF';
-}
-
-/**
- * Matched stopover details (for C2 and C3)
- */
-export interface MatchedStopover {
-    id: string;
-    address: string;
-    lat: number;
-    lng: number;
-    distanceKm: number;
-    /** Whether this stopover acts as the pickup or dropoff for the passenger */
-    matchRole: 'PICKUP' | 'DROPOFF';
-}
-
-/**
- * Detailed match information for enhanced search
- */
-export interface MatchDetails {
-    originMatch: boolean;
-    originDistanceKm: number;
-    destinationMatch: boolean;
-    destinationDistanceKm: number;
-    /** The best-matched stopover (for STOPOVER_PICKUP / STOPOVER_DROPOFF) */
-    matchedStopover?: MatchedStopover;
-    waypointMatches?: WaypointMatch[];
-    polylineSimilarity?: number;
-    isAlternateRoute: boolean;
-    pickupPoint?: {
-        lat: number;
-        lng: number;
-        address?: string;
-    };
-    dropoffPoint?: {
-        lat: number;
-        lng: number;
-        address?: string;
-    };
 }
 
 /**
@@ -222,19 +210,25 @@ export interface EnhancedSearchRideQuery extends SearchRideQuery {
 }
 
 /**
- * Enhanced search result with match metadata
+ * Enhanced search result — matches spec §10 output
  */
 export interface EnhancedSearchRideResult extends SearchRideResult {
-    /** Type of match found */
+    /** Condition that matched */
     matchType: RideMatchType;
-    /** Relevance score 0-100 */
-    matchScore: number;
-    /** Detailed match information */
-    matchDetails: MatchDetails;
-    /** Waypoints applicable to user's route */
-    relevantWaypoints?: WaypointInfo[];
+    /** Score per spec §8 (base 1000) */
+    score: number;
+    /** Which D_POINT type matched for pickup */
+    pickupMatchedPoint: 'ORIGIN' | 'WAYPOINT' | 'DEST';
+    /** Which D_POINT type matched for drop */
+    dropMatchedPoint: 'ORIGIN' | 'WAYPOINT' | 'DEST';
+    /** Distance from rider origin to matched pickup (km) */
+    pickupDistanceKm: number;
+    /** Distance from rider destination to matched drop (km) */
+    dropDistanceKm: number;
     /** Encoded route polyline */
     routePolyline?: string | null;
+    /** Relevant waypoints near rider */
+    relevantWaypoints?: WaypointInfo[];
 }
 
 /**
@@ -244,10 +238,11 @@ export interface EnhancedSearchRideResponse {
     rides: EnhancedSearchRideResult[];
     /** Grouped results by match type */
     grouped?: {
-        exactMatches: EnhancedSearchRideResult[];
-        stopoverPickups: EnhancedSearchRideResult[];
-        stopoverDropoffs: EnhancedSearchRideResult[];
-        alternateRoutes: EnhancedSearchRideResult[];
+        cond1: EnhancedSearchRideResult[];
+        cond2: EnhancedSearchRideResult[];
+        cond3: EnhancedSearchRideResult[];
+        cond4: EnhancedSearchRideResult[];
+        altRoute: EnhancedSearchRideResult[];
     };
     pagination: {
         page: number;

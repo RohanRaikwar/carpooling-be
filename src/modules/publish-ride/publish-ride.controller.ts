@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import * as DraftRideService from './draft-ride.service.js';
+import { formatDraftResponse } from './draft-ride.service.js';
 import * as PublishRideService from './publish-ride.service.js';
 import { AuthRequest } from '../../middlewares/authMiddleware.js';
 import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
@@ -24,7 +25,7 @@ export const createWithOrigin = async (req: AuthRequest, res: Response) => {
         return sendSuccess(res, {
             status: HttpStatus.CREATED,
             message: 'Draft ride created with origin',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         return sendError(res, {
@@ -37,12 +38,11 @@ export const createWithOrigin = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 2-3: UPDATE PICKUPS ================= */
 export const updatePickups = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updatePickups(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updatePickups(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Pickup locations updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -60,12 +60,11 @@ export const updatePickups = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 4: UPDATE DESTINATION ================= */
 export const updateDestination = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updateDestination(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updateDestination(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Destination updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -83,12 +82,11 @@ export const updateDestination = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 5-6: UPDATE DROPOFFS ================= */
 export const updateDropoffs = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updateDropoffs(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updateDropoffs(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Dropoff locations updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -106,12 +104,10 @@ export const updateDropoffs = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 7: COMPUTE ROUTES ================= */
 export const computeRoutes = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
         const includeAlternatives = req.query.includeAlternatives !== 'false';
 
         const result = await DraftRideService.computeRouteOptions(
             req.user.id,
-            draftId,
             includeAlternatives
         );
 
@@ -141,14 +137,13 @@ export const computeRoutes = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 7b: SELECT ROUTE ================= */
 export const selectRoute = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
         const { routeIndex } = req.body;
 
-        const draft = await DraftRideService.selectRoute(req.user.id, draftId, routeIndex);
+        const draft = await DraftRideService.selectRoute(req.user.id, routeIndex);
 
         return sendSuccess(res, {
             message: 'Route selected successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         let status = HttpStatus.INTERNAL_ERROR;
@@ -172,8 +167,7 @@ export const selectRoute = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 5: GET STOPPER POINT SUGGESTIONS ================= */
 export const getStopoverSuggestions = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const result = await DraftRideService.getStopoversAlongRoute(req.user.id, draftId);
+        const result = await DraftRideService.getStopoversAlongRoute(req.user.id);
 
         return sendSuccess(res, {
             message: 'Stopper point suggestions fetched successfully',
@@ -201,12 +195,11 @@ export const getStopoverSuggestions = async (req: AuthRequest, res: Response) =>
 /* ================= STEP 6: UPDATE STOPOVERS ================= */
 export const updateStopovers = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updateStopovers(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updateStopovers(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Stopovers updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -224,12 +217,11 @@ export const updateStopovers = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 9: UPDATE SCHEDULE ================= */
 export const updateSchedule = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updateSchedule(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updateSchedule(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Schedule updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -247,12 +239,11 @@ export const updateSchedule = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 10: UPDATE CAPACITY ================= */
 export const updateCapacity = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updateCapacity(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updateCapacity(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Capacity updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -270,8 +261,7 @@ export const updateCapacity = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 11: GET RECOMMENDED PRICE ================= */
 export const getRecommendedPrice = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const recommendation = await DraftRideService.getRecommendedPrice(req.user.id, draftId);
+        const recommendation = await DraftRideService.getRecommendedPrice(req.user.id);
 
         return sendSuccess(res, {
             message: 'Price recommendation calculated',
@@ -296,12 +286,11 @@ export const getRecommendedPrice = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 12: UPDATE PRICING ================= */
 export const updatePricing = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updatePricing(req.user.id, draftId, req.body);
+        const draft = await DraftRideService.updatePricing(req.user.id, req.body);
 
         return sendSuccess(res, {
             message: 'Pricing updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -319,12 +308,11 @@ export const updatePricing = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 13: UPDATE NOTES ================= */
 export const updateNotes = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.updateNotes(req.user.id, draftId, req.body.notes);
+        const draft = await DraftRideService.updateNotes(req.user.id, req.body.notes);
 
         return sendSuccess(res, {
             message: 'Notes updated successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -342,8 +330,7 @@ export const updateNotes = async (req: AuthRequest, res: Response) => {
 /* ================= STEP 14: PUBLISH RIDE (Redis → DB) ================= */
 export const publishRide = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const ride = await DraftRideService.publishRide(req.user.id, draftId);
+        const ride = await DraftRideService.publishRide(req.user.id);
 
         // Invalidate user rides cache (published rides cache)
         await deleteCache(cacheKeys.userRides(req.user.id));
@@ -390,29 +377,34 @@ export const publishRide = async (req: AuthRequest, res: Response) => {
 /* ================= LIST DRAFTS ================= */
 export const listDrafts = async (req: AuthRequest, res: Response) => {
     try {
-        const result = await DraftRideService.listDrafts(req.user.id, req.query as any);
+        const result = await DraftRideService.getUserDraft(req.user.id);
 
         return sendSuccess(res, {
-            message: 'Drafts fetched successfully',
-            data: result,
+            message: 'Draft fetched successfully',
+            data: formatDraftResponse(result),
         });
     } catch (error: any) {
+        if (error.message === 'DRAFT_NOT_FOUND') {
+            return sendSuccess(res, {
+                message: 'No active draft',
+                data: null,
+            });
+        }
         return sendError(res, {
             status: HttpStatus.INTERNAL_ERROR,
-            message: 'Failed to fetch drafts',
+            message: 'Failed to fetch draft',
         });
     }
 };
 
-/* ================= GET DRAFT BY ID ================= */
+/* ================= GET DRAFT ================= */
 export const getDraftById = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        const draft = await DraftRideService.getDraftById(req.user.id, draftId);
+        const draft = await DraftRideService.getUserDraft(req.user.id);
 
         return sendSuccess(res, {
             message: 'Draft fetched successfully',
-            data: draft,
+            data: formatDraftResponse(draft),
         });
     } catch (error: any) {
         const status = error.message === 'DRAFT_NOT_FOUND'
@@ -430,8 +422,7 @@ export const getDraftById = async (req: AuthRequest, res: Response) => {
 /* ================= DELETE DRAFT ================= */
 export const deleteDraft = async (req: AuthRequest, res: Response) => {
     try {
-        const draftId = req.params.id as string;
-        await DraftRideService.deleteDraft(req.user.id, draftId);
+        await DraftRideService.deleteDraft(req.user.id);
 
         return sendSuccess(res, {
             message: 'Draft deleted successfully',

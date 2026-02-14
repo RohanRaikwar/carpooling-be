@@ -12,126 +12,97 @@ import {
     rideIdParamSchema,
     updateStopoversSchema,
     selectRouteSchema,
-    listDraftsQuerySchema,
 } from './publish-ride.validator.js';
 
 const router = Router();
 
 /* ============================================================
-   PUBLISH RIDE WIZARD — All draft steps use Redis
+   PUBLISH RIDE WIZARD — Single draft per user (Redis)
    Flow: Origin → Destination → Compute Routes → Select Route
-         → Get Stopper Suggestions → Set Stoppers → Schedule
-         → Capacity → Get Price Recommendation → Set Pricing
-         → Notes → Publish
+         → Stopovers → Schedule → Capacity
+         → Get Price Recommendation → Set Pricing → Notes → Publish
+
+   Draft auto-deletes when user creates a new Origin or after 10 min TTL.
    ============================================================ */
 
 // Step 1: Create draft with origin
 router.post(
-    '/origin',
+    '/draft/origin',
     validate({ body: createOriginSchema }),
     controller.createWithOrigin
 );
 
 // Step 2: Set destination
 router.put(
-    '/:id/destination',
-    validate({ params: rideIdParamSchema, body: updateDestinationSchema }),
+    '/draft/destination',
+    validate({ body: updateDestinationSchema }),
     controller.updateDestination
 );
 
-// Step 3: Compute route options (find paths)
+// Step 3: Compute route options
 router.get(
-    '/:id/routes/compute',
-    validate({ params: rideIdParamSchema }),
+    '/draft/routes/compute',
     controller.computeRoutes
 );
 
-// Step 4: Select route (set path)
+// Step 4: Select route
 router.put(
-    '/:id/routes/select',
-    validate({ params: rideIdParamSchema, body: selectRouteSchema }),
+    '/draft/routes/select',
+    validate({ body: selectRouteSchema }),
     controller.selectRoute
 );
 
-// Step 5: Get stopper point suggestions (famous cities/places along the route)
+// Step 5: Get stopper point suggestions
 router.get(
-    '/:id/stopovers/suggestions',
-    validate({ params: rideIdParamSchema }),
+    '/draft/stopovers/suggestions',
     controller.getStopoverSuggestions
 );
 
 // Step 6: Set stopper points
 router.put(
-    '/:id/stopovers',
-    validate({ params: rideIdParamSchema, body: updateStopoversSchema }),
+    '/draft/stopovers',
+    validate({ body: updateStopoversSchema }),
     controller.updateStopovers
 );
 
-// Step 7: Set schedule (date/time)
+// Step 7: Set schedule
 router.put(
-    '/:id/schedule',
-    validate({ params: rideIdParamSchema, body: updateScheduleSchema }),
+    '/draft/schedule',
+    validate({ body: updateScheduleSchema }),
     controller.updateSchedule
 );
 
-// Step 8: Set capacity (seats)
+// Step 8: Set capacity
 router.put(
-    '/:id/capacity',
-    validate({ params: rideIdParamSchema, body: updateCapacitySchema }),
+    '/draft/capacity',
+    validate({ body: updateCapacitySchema }),
     controller.updateCapacity
 );
 
-// Step 9: Get recommended price (with stopper point pricing)
+// Step 9: Get recommended price
 router.get(
-    '/:id/pricing/recommended',
-    validate({ params: rideIdParamSchema }),
+    '/draft/pricing/recommended',
     controller.getRecommendedPrice
 );
 
 // Step 10: Set pricing
 router.put(
-    '/:id/pricing',
-    validate({ params: rideIdParamSchema, body: updatePricingSchema }),
+    '/draft/pricing',
+    validate({ body: updatePricingSchema }),
     controller.updatePricing
 );
 
 // Step 11: Update notes
 router.patch(
-    '/:id/notes',
-    validate({ params: rideIdParamSchema, body: updateNotesSchema }),
+    '/draft/notes',
+    validate({ body: updateNotesSchema }),
     controller.updateNotes
 );
 
 // Step 12: Publish ride — Redis → DB
 router.post(
-    '/:id/publish',
-    validate({ params: rideIdParamSchema }),
+    '/draft/publish',
     controller.publishRide
-);
-
-/* ============================================================
-   DRAFT MANAGEMENT (Redis)
-   ============================================================ */
-
-// List user's drafts
-router.get(
-    '/drafts',
-    validate({ query: listDraftsQuerySchema }),
-    controller.listDrafts
-);
-
-// Get a single draft by ID
-router.get(
-    '/drafts/:id',
-    validate({ params: rideIdParamSchema }),
-    controller.getDraftById
-);
-
-// Delete a draft
-router.delete(
-    '/drafts/:id',
-    validate({ params: rideIdParamSchema }),
-    controller.deleteDraft
 );
 
 /* ============================================================
