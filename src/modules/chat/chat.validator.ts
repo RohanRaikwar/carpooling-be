@@ -36,6 +36,22 @@ export const sendMessageSchema = z.object({
     payloadJson: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const sendImageSchema = z.object({
+    receiverId: z.string().uuid('Invalid receiver ID'),
+    clientMsgId: z.string().min(1, 'Client message ID is required').max(100),
+    text: z.string().max(5000, 'Caption too long').optional(),
+});
+
+export const sendLocationSchema = z.object({
+    receiverId: z.string().uuid('Invalid receiver ID'),
+    clientMsgId: z.string().min(1, 'Client message ID is required').max(100),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    address: z.string().max(500).optional(),
+    placeId: z.string().max(255).optional(),
+    text: z.string().max(5000, 'Message too long').optional(),
+});
+
 export const markReadSchema = z.object({
     lastReadMessageId: z.string().uuid('Invalid message ID'),
 });

@@ -81,6 +81,7 @@ export interface CreateOriginInput {
     originAddress: string;
     originLat: number;
     originLng: number;
+    pickup?: LocationInput;
 }
 
 /* ================= STEP 2: DESTINATION INPUT ================= */
@@ -89,6 +90,7 @@ export interface UpdateDestinationInput {
     destinationAddress: string;
     destinationLat: number;
     destinationLng: number;
+    dropoff?: LocationInput;
 }
 
 /* ================= STEP 3: SCHEDULE INPUT (Date/Time) ================= */
@@ -100,8 +102,8 @@ export interface UpdateScheduleInput {
 /* ================= STEP 4: CAPACITY INPUT (Seats) ================= */
 export interface UpdateCapacityInput {
     totalSeats: number;
-    basePricePerSeat: number;
-    currency?: string;
+    maxLuggagePerPerson?: number;
+    backSeatOnly?: boolean;
 }
 
 /* ================= RIDE RESPONSE ================= */
@@ -212,6 +214,14 @@ export interface PriceRecommendation {
         fuelCost: number;
         distanceKm: number;
         pricePerKm: number;
+        fuelPricePerLiter?: number;
+        fuelPriceCurrency?: string;
+        fuelCountryCode?: string;
+        fuelSource?: string;
+        fuelPriceEffectiveDate?: string | null;
+        efficiencyKmPerLiter?: number;
+        fuelPriceIsFallback?: boolean;
+        fuelPriceIsCached?: boolean;
     };
 }
 
@@ -252,4 +262,3 @@ export interface ListDraftsQuery {
     page?: number;
     limit?: number;
 }
-

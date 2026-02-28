@@ -20,6 +20,7 @@ import {
     StopoverSuggestion,
     StopoverSuggestionsResult,
 } from './publish-ride.types.js';
+import { getFuelPriceForCurrency } from '../../services/fuel-price.service.js';
 
 // ============================================================
 //  CONSTANTS
@@ -74,10 +75,10 @@ interface DraftRide {
     originLat?: number;
     originLng?: number;
 
-    // Pickups (Step 2-3)
+    // Pickups (Step 1)
     pickups?: LocationInput[];
 
-    // Destination (Step 4)
+    // Destination (Step 2)
     destinationPlaceId?: string;
     destinationAddress?: string;
     destinationLat?: number;
@@ -103,6 +104,8 @@ interface DraftRide {
     basePricePerSeat?: number;
     currency?: string;
     vehicleId?: string | null;
+    maxLuggagePerPerson?: number;
+    backSeatOnly?: boolean;
 
     // Notes (Step 13)
     notes?: string;
@@ -131,7 +134,7 @@ const saveDraft = async (draft: DraftRide): Promise<DraftRide> => {
 };
 
 // ============================================================
-//  STEP 1: CREATE WITH ORIGIN
+//  STEP 1: CREATE WITH ORIGIN + PICKUP
 // ============================================================
 
 export const createWithOrigin = async (driverId: string, input: CreateOriginInput): Promise<DraftRide> => {
@@ -148,6 +151,7 @@ export const createWithOrigin = async (driverId: string, input: CreateOriginInpu
         originAddress: input.originAddress,
         originLat: input.originLat,
         originLng: input.originLng,
+        pickups: input.pickup ? [input.pickup] : undefined,
     };
 
     return saveDraft(draft);
@@ -168,7 +172,7 @@ export const updatePickups = async (
 };
 
 // ============================================================
-//  STEP 4: UPDATE DESTINATION
+//  STEP 2: UPDATE DESTINATION + DROPOFF
 // ============================================================
 
 export const updateDestination = async (
@@ -180,7 +184,10 @@ export const updateDestination = async (
     draft.destinationAddress = input.destinationAddress;
     draft.destinationLat = input.destinationLat;
     draft.destinationLng = input.destinationLng;
-    draft.step = Math.max(draft.step, 4);
+    if (input.dropoff) {
+        draft.dropoffs = [input.dropoff];
+    }
+    draft.step = Math.max(draft.step, 2);
     return saveDraft(draft);
 };
 
@@ -536,9 +543,9 @@ export const updateCapacity = async (
     });
 
     draft.totalSeats = input.totalSeats;
-    draft.basePricePerSeat = input.basePricePerSeat;
-    draft.currency = input.currency || 'GBP';
     draft.vehicleId = vehicle?.id || null;
+    draft.maxLuggagePerPerson = input.maxLuggagePerPerson ?? 2;
+    draft.backSeatOnly = input.backSeatOnly ?? false;
     draft.step = Math.max(draft.step, 10);
 
     return saveDraft(draft);
@@ -548,9 +555,7 @@ export const updateCapacity = async (
 //  STEP 11: GET RECOMMENDED PRICE
 // ============================================================
 
-const FUEL_PRICE_PER_LITER = 1.50; // GBP
-const FUEL_EFFICIENCY_KM_PER_LITER = 12;
-const PRICE_PER_KM = FUEL_PRICE_PER_LITER / FUEL_EFFICIENCY_KM_PER_LITER;
+const DEFAULT_FUEL_EFFICIENCY_KM_PER_LITER = Number(process.env.FUEL_EFFICIENCY_KM_PER_LITER || 12);
 
 export const getRecommendedPrice = async (
     driverId: string,
@@ -561,8 +566,14 @@ export const getRecommendedPrice = async (
         throw new Error('ROUTE_REQUIRED_FOR_PRICING');
     }
 
+    const fuelContext = await getFuelPriceForCurrency(draft.currency || 'GBP');
+    const fuelEfficiency = DEFAULT_FUEL_EFFICIENCY_KM_PER_LITER > 0
+        ? DEFAULT_FUEL_EFFICIENCY_KM_PER_LITER
+        : 12;
+    const pricePerKm = fuelContext.pricePerLiter / fuelEfficiency;
+
     const distanceKm = draft.routeDistanceMeters / 1000;
-    const fuelCost = distanceKm * PRICE_PER_KM;
+    const fuelCost = distanceKm * pricePerKm;
 
     const minPrice = Math.round(fuelCost * 0.8);
     const recommendedPrice = Math.round(fuelCost * 1.5);
@@ -601,7 +612,15 @@ export const getRecommendedPrice = async (
         breakdown: {
             fuelCost: Math.round(fuelCost * 100) / 100,
             distanceKm: Math.round(distanceKm * 10) / 10,
-            pricePerKm: Math.round(PRICE_PER_KM * 100) / 100,
+            pricePerKm: Math.round(pricePerKm * 100) / 100,
+            fuelPricePerLiter: Math.round(fuelContext.pricePerLiter * 100) / 100,
+            fuelPriceCurrency: fuelContext.currency,
+            fuelCountryCode: fuelContext.countryCode,
+            fuelSource: fuelContext.sourceLabel,
+            fuelPriceEffectiveDate: fuelContext.effectiveDate,
+            efficiencyKmPerLiter: Math.round(fuelEfficiency * 100) / 100,
+            fuelPriceIsFallback: fuelContext.isFallback,
+            fuelPriceIsCached: fuelContext.isCached,
         },
         stopoverPricing,
     };
@@ -697,6 +716,9 @@ export const publishRide = async (driverId: string) => {
                 availableSeats: draft.totalSeats!,
                 basePricePerSeat: draft.basePricePerSeat!,
                 currency: draft.currency || 'GBP',
+
+                maxLuggagePerPerson: draft.maxLuggagePerPerson ?? 2,
+                backSeatOnly: draft.backSeatOnly ?? false,
 
                 notes: draft.notes || null,
                 status: RideStatus.PUBLISHED,

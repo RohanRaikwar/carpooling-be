@@ -2,10 +2,26 @@
 
 export interface SendMessageInput {
     receiverId: string;
-    text: string;
+    text?: string;
     clientMsgId: string;
-    type?: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
+    type?: 'TEXT' | 'IMAGE' | 'FILE' | 'LOCATION' | 'SYSTEM';
     payloadJson?: Record<string, unknown>;
+}
+
+export interface ImagePayload {
+    imageUrl: string;
+    thumbnailUrl?: string;
+    width?: number;
+    height?: number;
+    fileSize?: number;
+    mimeType?: string;
+}
+
+export interface LocationPayload {
+    latitude: number;
+    longitude: number;
+    address?: string;
+    placeId?: string;
 }
 
 export interface PaginationQuery {
@@ -56,9 +72,10 @@ export interface WsEventEnvelope<T = unknown> {
 
 export interface WsSendMessageData {
     receiverId: string;
-    text: string;
+    text?: string;
     clientMsgId: string;
     type?: string;
+    payloadJson?: Record<string, unknown>;
 }
 
 export interface WsTypingData {

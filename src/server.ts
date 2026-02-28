@@ -5,6 +5,7 @@ import http from 'http';
 import app from './app.js';
 import logger from './utils/logger.js';
 import { initSocket } from './socket/index.js';
+import { startFuelPriceCron } from './jobs/fuel-price.cron.js';
 
 const PORT = process.env.PORT || 3000;
 (async () => {
@@ -16,6 +17,9 @@ const startServer = async () => {
     const server = http.createServer(app);
     await initSocket(server);
 
+    // Start scheduled jobs
+    startFuelPriceCron();
+
     server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
     });
@@ -26,3 +30,4 @@ const startServer = async () => {
 };
 
 startServer();
+

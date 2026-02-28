@@ -5,6 +5,7 @@ import * as PublishRideService from './publish-ride.service.js';
 import { AuthRequest } from '../../middlewares/authMiddleware.js';
 import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
 import { getCache, setCache, deleteCache } from '../../services/cache.service.js';
+import { getCurrentFuelPrice, refreshFuelPrice as refreshFuelPriceSvc } from '../../services/fuel-price.service.js';
 import { log } from 'console';
 
 // Cache key helpers (for published rides only)
@@ -529,3 +530,59 @@ export const cancelRide = async (req: AuthRequest, res: Response) => {
         });
     }
 };
+
+/* ============================================================
+   FUEL PRICE — DEBUG & REFRESH
+   ============================================================ */
+
+/* ================= GET CURRENT FUEL PRICE ================= */
+export const getFuelPrice = async (req: AuthRequest, res: Response) => {
+    try {
+        const currency = (req.query.currency as string) || 'GBP';
+        const fuelPrice = await getCurrentFuelPrice(currency);
+
+        return sendSuccess(res, {
+            message: 'Current fuel price fetched successfully',
+            data: {
+                countryCode: fuelPrice.countryCode,
+                currency: fuelPrice.currency,
+                fuelType: fuelPrice.fuelType,
+                pricePerLiter: fuelPrice.pricePerLiter,
+                effectiveDate: fuelPrice.effectiveDate,
+                source: fuelPrice.sourceLabel,
+                isFallback: fuelPrice.isFallback,
+                isCached: fuelPrice.isCached,
+            },
+        });
+    } catch (error: any) {
+        return sendError(res, {
+            status: HttpStatus.INTERNAL_ERROR,
+            message: 'Failed to fetch fuel price',
+        });
+    }
+};
+
+/* ================= REFRESH FUEL PRICE ================= */
+export const refreshFuelPrice = async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await refreshFuelPriceSvc('GB');
+
+        return sendSuccess(res, {
+            message: 'UK fuel price refreshed successfully',
+            data: {
+                countryCode: result.countryCode,
+                currency: result.currency,
+                fuelType: result.fuelType,
+                pricePerLiter: result.pricePerLiter,
+                effectiveDate: result.effectiveDate,
+                source: result.sourceLabel,
+            },
+        });
+    } catch (error: any) {
+        return sendError(res, {
+            status: HttpStatus.INTERNAL_ERROR,
+            message: 'Failed to refresh fuel price from GOV.UK',
+        });
+    }
+};
+

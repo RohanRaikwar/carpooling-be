@@ -18,21 +18,21 @@ const router = Router();
 
 /* ============================================================
    PUBLISH RIDE WIZARD — Single draft per user (Redis)
-   Flow: Origin → Destination → Compute Routes → Select Route
-         → Stopovers → Schedule → Capacity
+   Flow: Origin (+ pickup) → Destination (+ dropoff) → Compute Routes
+         → Select Route → Stopovers → Schedule → Capacity
          → Get Price Recommendation → Set Pricing → Notes → Publish
 
    Draft auto-deletes when user creates a new Origin or after 10 min TTL.
    ============================================================ */
 
-// Step 1: Create draft with origin
+// Step 1: Create draft with origin + pickup point
 router.post(
     '/draft/origin',
     validate({ body: createOriginSchema }),
     controller.createWithOrigin
 );
 
-// Step 2: Set destination
+// Step 2: Set destination + dropoff point
 router.put(
     '/draft/destination',
     validate({ body: updateDestinationSchema }),
@@ -52,7 +52,7 @@ router.put(
     controller.selectRoute
 );
 
-// Step 5: Get stopper point suggestions
+// Step 9: Get stopper point suggestions
 router.get(
     '/draft/stopovers/suggestions',
     controller.getStopoverSuggestions
@@ -106,6 +106,16 @@ router.post(
 );
 
 /* ============================================================
+   FUEL PRICE — DEBUG & REFRESH
+   ============================================================ */
+
+// Get current UK fuel price (cached or live)
+router.get('/fuel-price', controller.getFuelPrice);
+
+// Force refresh fuel price from GOV.UK
+router.post('/fuel-price/refresh', controller.refreshFuelPrice);
+
+/* ============================================================
    PUBLISHED RIDE OPERATIONS (DB)
    ============================================================ */
 
@@ -131,3 +141,4 @@ router.delete(
 );
 
 export default router;
+

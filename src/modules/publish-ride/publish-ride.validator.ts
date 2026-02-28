@@ -101,20 +101,30 @@ export const rideIdParamSchema = z.object({
     id: z.string().uuid('Invalid ride ID'),
 });
 
-/* ================= STEP 1: CREATE WITH ORIGIN ONLY ================= */
+/* ================= LOCATION SCHEMA (Reusable) ================= */
+const locationSchema = z.object({
+    placeId: z.string().trim().min(1, 'Place ID is required'),
+    address: z.string().trim().min(1, 'Address is required'),
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+});
+
+/* ================= STEP 1: CREATE WITH ORIGIN + PICKUP ================= */
 export const createOriginSchema = z.object({
     originPlaceId: z.string().trim().min(1, 'Origin place ID is required'),
     originAddress: z.string().trim().min(1, 'Origin address is required'),
     originLat: z.number().min(-90).max(90),
     originLng: z.number().min(-180).max(180),
+    pickup: locationSchema.optional(),
 });
 
-/* ================= STEP 2: UPDATE DESTINATION ================= */
+/* ================= STEP 2: UPDATE DESTINATION + DROPOFF ================= */
 export const updateDestinationSchema = z.object({
     destinationPlaceId: z.string().trim().min(1, 'Destination place ID is required'),
     destinationAddress: z.string().trim().min(1, 'Destination address is required'),
     destinationLat: z.number().min(-90).max(90),
     destinationLng: z.number().min(-180).max(180),
+    dropoff: locationSchema.optional(),
 });
 
 /* ================= STEP 3: UPDATE SCHEDULE (Date/Time) ================= */
@@ -132,17 +142,11 @@ export const updateScheduleSchema = z.object({
 /* ================= STEP 4: UPDATE CAPACITY (Seats/Price) ================= */
 export const updateCapacitySchema = z.object({
     totalSeats: z.number().int().min(1, 'At least 1 seat required').max(50, 'Maximum 50 seats'),
-    basePricePerSeat: z.number().positive('Price must be positive'),
-    currency: z.string().default('GBP'),
+    maxLuggagePerPerson: z.number().int().min(0, 'Luggage count cannot be negative').max(10, 'Maximum 10 bags per person').default(2),
+    backSeatOnly: z.boolean().default(false),
 });
 
-/* ================= LOCATION SCHEMA (Reusable) ================= */
-const locationSchema = z.object({
-    placeId: z.string().trim().min(1, 'Place ID is required'),
-    address: z.string().trim().min(1, 'Address is required'),
-    lat: z.number().min(-90).max(90),
-    lng: z.number().min(-180).max(180),
-});
+
 
 /* ================= PHASE 1: SEPARATE WAYPOINT ENDPOINTS ================= */
 

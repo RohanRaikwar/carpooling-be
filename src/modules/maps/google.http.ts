@@ -9,6 +9,7 @@ export const googleHttp = {
     input: string;
     location?: { lat: number; lng: number };
     radius?: number;
+    types?: string;
   }): Promise<ApiResponse<any>> {
     const params: any = {
       input: payload.input,
@@ -18,6 +19,10 @@ export const googleHttp = {
     if (payload.location) {
       params.location = `${payload.location.lat},${payload.location.lng}`;
       if (payload.radius) params.radius = payload.radius;
+    }
+
+    if (payload.types) {
+      params.types = payload.types;
     }
 
     return axiosClient.request({

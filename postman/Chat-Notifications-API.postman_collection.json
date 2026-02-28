@@ -1,7 +1,8 @@
 {
     "info": {
-        "name": "Carpooling - Chat & Notifications API",
-        "description": "Chat module (1:1 messaging with booking authorization) and Notification module (in-app + push notifications) for the carpooling backend.",
+        "_postman_id": "chat-notifications-api-v1",
+        "name": "Chat & Notifications API",
+        "description": "# Chat & Notifications API\n\nComplete API documentation for the **Chat** and **Notification** modules of the Carpooling Backend.\n\n## Base URL\n```\nhttp://localhost:3000/api/v1\n```\n\n## Authentication\nAll endpoints require a valid JWT token in the `Authorization` header:\n```\nAuthorization: Bearer <access_token>\n```\n\n---\n\n## Architecture Overview\n\n### Chat Module\n- **REST APIs** → For data fetching (conversation list, message history, unread count)\n- **WebSocket Events** → For real-time messaging (send/receive messages, typing indicators, read/delivery receipts)\n- Chat is **only available** between a rider and driver who have a **CONFIRMED** booking.\n\n### Notification Module\n- **REST APIs** → For fetching notifications, marking as read, managing device tokens\n- **WebSocket Events** → Server pushes `notification:new` in real-time when user is online\n- **Push Notifications** → FCM/APNs for offline users (automatic, no API needed)\n\n---\n\n## WebSocket Connection\n\nConnect to Socket.IO:\n```\nconst socket = io('http://localhost:3000', {\n  auth: { token: '<access_token>' }\n});\n```\n\n### On Connection:\n- Server automatically syncs any **undelivered messages** via `chat:sync` event\n- Server sets user as **online** in presence system\n\n### On Disconnect:\n- If no other sockets remain for the user, server marks user as **offline**",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "auth": {
@@ -9,47 +10,41 @@
         "bearer": [
             {
                 "key": "token",
-                "value": "{{accessToken}}",
+                "value": "{{access_token}}",
                 "type": "string"
             }
         ]
     },
     "variable": [
         {
-            "key": "baseUrl",
-            "value": "http://localhost:3000",
-            "type": "string"
+            "key": "base_url",
+            "value": "http://localhost:3000/api/v1"
         },
         {
-            "key": "accessToken",
-            "value": "",
-            "type": "string"
+            "key": "access_token",
+            "value": "<your_jwt_token>"
         },
         {
-            "key": "conversationId",
-            "value": "",
-            "type": "string"
+            "key": "conversation_id",
+            "value": "<conversation_uuid>"
         },
         {
-            "key": "receiverId",
-            "value": "",
-            "type": "string"
+            "key": "receiver_id",
+            "value": "<receiver_user_uuid>"
         },
         {
-            "key": "notificationId",
-            "value": "",
-            "type": "string"
+            "key": "notification_id",
+            "value": "<notification_uuid>"
         },
         {
-            "key": "deviceTokenId",
-            "value": "",
-            "type": "string"
+            "key": "device_token_id",
+            "value": "<device_token_uuid>"
         }
     ],
     "item": [
         {
-            "name": "📨 Chat",
-            "description": "1:1 chat between rider and driver. Requires a CONFIRMED booking between the two users.",
+            "name": "📨 Chat — REST APIs",
+            "description": "REST endpoints for the Chat module.\n\nBase path: `/api/v1/chat`\n\nAll endpoints require authentication via Bearer token.",
             "item": [
                 {
                     "name": "List Conversations",
@@ -57,68 +52,66 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/chat?limit=20",
+                            "raw": "{{base_url}}/chat?limit=20",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "chat"
                             ],
                             "query": [
                                 {
                                     "key": "cursor",
                                     "value": "",
-                                    "description": "Cursor for pagination (conversation ID)",
+                                    "description": "UUID of the last conversation from previous page (for cursor-based pagination)",
                                     "disabled": true
                                 },
                                 {
                                     "key": "limit",
                                     "value": "20",
-                                    "description": "Number of conversations per page (1-50, default: 20)"
+                                    "description": "Number of conversations to return (1–50, default: 20)"
                                 }
                             ]
                         },
-                        "description": "Get paginated list of user's conversations with peer info, last message, and unread count."
-                    }
+                        "description": "Get a paginated list of the authenticated user's conversations.\n\nEach conversation includes:\n- **peer** — the other user's `id`, `name`, `avatarUrl`\n- **lastMessage** — preview of the most recent message\n- **unreadCount** — number of unread messages in this conversation\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Conversations fetched successfully\",\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": \"conv-uuid\",\n        \"peer\": {\n          \"id\": \"user-uuid\",\n          \"name\": \"John Doe\",\n          \"avatarUrl\": \"https://...\"\n        },\n        \"lastMessage\": {\n          \"id\": \"msg-uuid\",\n          \"text\": \"Hey, I'll be there in 5 mins\",\n          \"senderId\": \"user-uuid\",\n          \"createdAt\": \"2026-02-15T10:30:00Z\",\n          \"type\": \"TEXT\"\n        },\n        \"unreadCount\": 2,\n        \"updatedAt\": \"2026-02-15T10:30:00Z\"\n      }\n    ],\n    \"nextCursor\": \"conv-uuid-last\",\n    \"hasMore\": true\n  }\n}\n```"
+                    },
+                    "response": []
                 },
                 {
-                    "name": "Get Messages",
+                    "name": "Get Messages in Conversation",
                     "request": {
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/chat/{{conversationId}}/messages?limit=30",
+                            "raw": "{{base_url}}/chat/{{conversation_id}}/messages?limit=30",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "chat",
-                                "{{conversationId}}",
+                                "{{conversation_id}}",
                                 "messages"
                             ],
                             "query": [
                                 {
                                     "key": "cursor",
                                     "value": "",
-                                    "description": "Cursor for pagination (message ID)",
+                                    "description": "UUID of the last message from previous page (for pagination)",
                                     "disabled": true
                                 },
                                 {
                                     "key": "limit",
                                     "value": "30",
-                                    "description": "Number of messages per page (1-100, default: 30)"
+                                    "description": "Number of messages to return (1–100, default: 30)"
                                 }
                             ]
                         },
-                        "description": "Get paginated messages in a conversation (newest first). User must be a participant."
-                    }
+                        "description": "Get paginated message history for a specific conversation.\n\nMessages are returned in **descending order** (newest first).\n\nThe authenticated user must be a participant in the conversation.\n\n### Path Parameters\n| Param | Type | Description |\n|---|---|---|\n| `conversationId` | UUID | The conversation ID |\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Messages fetched successfully\",\n  \"data\": {\n    \"messages\": [\n      {\n        \"id\": \"msg-uuid\",\n        \"conversationId\": \"conv-uuid\",\n        \"senderId\": \"user-uuid\",\n        \"receiverId\": \"user-uuid-2\",\n        \"type\": \"TEXT\",\n        \"text\": \"Hey! Are you on the way?\",\n        \"payloadJson\": null,\n        \"clientMsgId\": \"client-123\",\n        \"deliveredAt\": \"2026-02-15T10:30:05Z\",\n        \"readAt\": \"2026-02-15T10:30:10Z\",\n        \"createdAt\": \"2026-02-15T10:30:00Z\"\n      }\n    ],\n    \"nextCursor\": \"msg-uuid-last\",\n    \"hasMore\": false\n  }\n}\n```\n\n### Errors\n| Status | Message |\n|---|---|\n| 404 | Conversation not found or you are not a participant |"
+                    },
+                    "response": []
                 },
                 {
-                    "name": "Send Message",
+                    "name": "Send Message (REST Fallback)",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -129,22 +122,98 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"receiverId\": \"{{receiverId}}\",\n  \"text\": \"Hey! I booked your ride. What's the pickup point?\",\n  \"clientMsgId\": \"msg_client_001\",\n  \"type\": \"TEXT\"\n}"
+                            "raw": "{\n  \"receiverId\": \"{{receiver_id}}\",\n  \"text\": \"Hello! I'll be at the pickup point in 5 minutes.\",\n  \"clientMsgId\": \"client-msg-unique-id-123\",\n  \"type\": \"TEXT\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/chat/send",
+                            "raw": "{{base_url}}/chat/send",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "chat",
                                 "send"
                             ]
                         },
-                        "description": "Send a message to another user. Requires a CONFIRMED booking between sender and receiver.\n\nFields:\n- `receiverId` (required): UUID of the receiver\n- `text` (required): Message text (1-5000 chars)\n- `clientMsgId` (required): Client-side message ID for idempotency\n- `type` (optional): TEXT (default), IMAGE, FILE, SYSTEM\n- `payloadJson` (optional): Additional structured data\n\n**Error 403**: Chat is only available after a booking is confirmed between rider and driver."
-                    }
+                        "description": "Send a text message via REST API.\n\n> **Note:** Prefer using the WebSocket `chat:send` event for real-time messaging. This REST endpoint is a **fallback** when the WebSocket connection is unavailable.\n\n> For **images**, use `POST /chat/send-image`. For **locations**, use `POST /chat/send-location`.\n\n### Body Parameters\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `receiverId` | UUID | ✅ | User ID of the message recipient |\n| `text` | string | ✅ | Message text (1–5000 chars) |\n| `clientMsgId` | string | ✅ | Client-generated unique ID for idempotency |\n| `type` | string | ❌ | Message type: `TEXT`, `IMAGE`, `FILE`, `LOCATION`, `SYSTEM` (default: `TEXT`) |\n| `payloadJson` | object | ❌ | Additional metadata (for IMAGE/FILE/LOCATION types) |\n\n### Prerequisites\n- Sender and receiver must have a **CONFIRMED** booking between them\n- Cannot send a message to yourself\n\n### Response (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Message sent successfully\",\n  \"data\": {\n    \"id\": \"msg-uuid\",\n    \"conversationId\": \"conv-uuid\",\n    \"senderId\": \"your-uuid\",\n    \"receiverId\": \"receiver-uuid\",\n    \"type\": \"TEXT\",\n    \"text\": \"Hello! I'll be at the pickup point in 5 minutes.\",\n    \"clientMsgId\": \"client-msg-unique-id-123\",\n    \"createdAt\": \"2026-02-15T10:30:00Z\"\n  }\n}\n```\n\n### Errors\n| Status | Message |\n|---|---|\n| 400 | You cannot send a message to yourself |\n| 400 | Text is required for text messages |\n| 403 | Chat is only available after a booking is confirmed between rider and driver |"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Image Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": "",
+                                    "description": "Image file (JPG, PNG, or WEBP — max 5 MB)"
+                                },
+                                {
+                                    "key": "receiverId",
+                                    "value": "{{receiver_id}}",
+                                    "type": "text",
+                                    "description": "UUID of the message recipient"
+                                },
+                                {
+                                    "key": "clientMsgId",
+                                    "value": "img-client-msg-001",
+                                    "type": "text",
+                                    "description": "Client-generated unique ID for idempotency"
+                                },
+                                {
+                                    "key": "text",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional caption for the image (max 5000 chars)",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/chat/send-image",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat",
+                                "send-image"
+                            ]
+                        },
+                        "description": "Send an image message via multipart form upload.\n\nThe image is uploaded to **S3** and the resulting URL is stored in the message's `payloadJson`.\n\n### Form Data Parameters\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `image` | file | ✅ | Image file (JPG, PNG, or WEBP — max 5 MB) |\n| `receiverId` | UUID | ✅ | User ID of the message recipient |\n| `clientMsgId` | string | ✅ | Client-generated unique ID for idempotency |\n| `text` | string | ❌ | Optional image caption (max 5000 chars) |\n\n### Prerequisites\n- Sender and receiver must have a **CONFIRMED** booking between them\n- Cannot send a message to yourself\n\n### Response (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Image message sent successfully\",\n  \"data\": {\n    \"id\": \"msg-uuid\",\n    \"conversationId\": \"conv-uuid\",\n    \"senderId\": \"your-uuid\",\n    \"receiverId\": \"receiver-uuid\",\n    \"type\": \"IMAGE\",\n    \"text\": \"Check this out!\",\n    \"payloadJson\": {\n      \"imageUrl\": \"https://bucket.s3.region.amazonaws.com/uploads/chat/uuid.jpg\",\n      \"mimeType\": \"image/jpeg\",\n      \"fileSize\": 245760\n    },\n    \"clientMsgId\": \"img-client-msg-001\",\n    \"createdAt\": \"2026-02-15T10:30:00Z\"\n  }\n}\n```\n\n### Conversation Preview\nImage messages show as `📷 Image` (or `📷 {caption}` if a caption is provided) in the conversation list.\n\n### Errors\n| Status | Message |\n|---|---|\n| 400 | Image file is required |\n| 400 | Only JPG, PNG, and WEBP images are allowed |\n| 400 | You cannot send a message to yourself |\n| 403 | Chat is only available after a booking is confirmed |\n| 500 | Failed to upload image |"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Location Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"receiverId\": \"{{receiver_id}}\",\n  \"clientMsgId\": \"loc-client-msg-001\",\n  \"latitude\": 28.6139,\n  \"longitude\": 77.2090,\n  \"address\": \"India Gate, New Delhi\",\n  \"placeId\": \"ChIJLbZ-NFoaDTkRQCY_aBYIFY8\",\n  \"text\": \"I'm here at India Gate\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/chat/send-location",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat",
+                                "send-location"
+                            ]
+                        },
+                        "description": "Send a location pin as a chat message.\n\nUseful for sharing pickup/drop-off points, or current location during a ride.\n\n### Body Parameters\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `receiverId` | UUID | ✅ | User ID of the message recipient |\n| `clientMsgId` | string | ✅ | Client-generated unique ID for idempotency |\n| `latitude` | number | ✅ | Latitude (-90 to 90) |\n| `longitude` | number | ✅ | Longitude (-180 to 180) |\n| `address` | string | ❌ | Human-readable address (max 500 chars) |\n| `placeId` | string | ❌ | Google Places ID (max 255 chars) |\n| `text` | string | ❌ | Optional text message (max 5000 chars) |\n\n### Prerequisites\n- Sender and receiver must have a **CONFIRMED** booking between them\n- Cannot send a message to yourself\n\n### Response (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Location message sent successfully\",\n  \"data\": {\n    \"id\": \"msg-uuid\",\n    \"conversationId\": \"conv-uuid\",\n    \"senderId\": \"your-uuid\",\n    \"receiverId\": \"receiver-uuid\",\n    \"type\": \"LOCATION\",\n    \"text\": \"I'm here at India Gate\",\n    \"payloadJson\": {\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090,\n      \"address\": \"India Gate, New Delhi\",\n      \"placeId\": \"ChIJLbZ-NFoaDTkRQCY_aBYIFY8\"\n    },\n    \"clientMsgId\": \"loc-client-msg-001\",\n    \"createdAt\": \"2026-02-15T10:30:00Z\"\n  }\n}\n```\n\n### Conversation Preview\nLocation messages show as `📍 Location` (or `📍 {text}` if text is provided) in the conversation list.\n\n### Errors\n| Status | Message |\n|---|---|\n| 400 | You cannot send a message to yourself |\n| 400 | Valid latitude and longitude are required |\n| 403 | Chat is only available after a booking is confirmed |"
+                    },
+                    "response": []
                 },
                 {
                     "name": "Mark Messages as Read",
@@ -158,49 +227,47 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"lastReadMessageId\": \"message-uuid-here\"\n}"
+                            "raw": "{\n  \"lastReadMessageId\": \"<message-uuid-to-mark-read-up-to>\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/chat/{{conversationId}}/read",
+                            "raw": "{{base_url}}/chat/{{conversation_id}}/read",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "chat",
-                                "{{conversationId}}",
+                                "{{conversation_id}}",
                                 "read"
                             ]
                         },
-                        "description": "Mark all messages up to `lastReadMessageId` as read in a conversation."
-                    }
+                        "description": "Mark all messages in a conversation as read up to (and including) the specified message.\n\n### Path Parameters\n| Param | Type | Description |\n|---|---|---|\n| `conversationId` | UUID | The conversation ID |\n\n### Body Parameters\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `lastReadMessageId` | UUID | ✅ | Mark all messages up to this message as read |\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Messages marked as read\"\n}\n```\n\n### Errors\n| Status | Message |\n|---|---|\n| 404 | Message not found |"
+                    },
+                    "response": []
                 },
                 {
-                    "name": "Get Unread Count",
+                    "name": "Get Unread Message Count",
                     "request": {
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/chat/unread-count",
+                            "raw": "{{base_url}}/chat/unread-count",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "chat",
                                 "unread-count"
                             ]
                         },
-                        "description": "Get total unread message count across all conversations."
-                    }
+                        "description": "Get the total number of unread messages across all conversations for the authenticated user.\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Unread count fetched successfully\",\n  \"data\": {\n    \"unreadCount\": 5\n  }\n}\n```"
+                    },
+                    "response": []
                 }
             ]
         },
         {
-            "name": "🔔 Notifications",
-            "description": "In-app notifications with Redis-cached unread counts and FCM/APNs push for offline users.",
+            "name": "🔔 Notifications — REST APIs",
+            "description": "REST endpoints for the Notification module.\n\nBase path: `/api/v1/notifications`\n\nAll endpoints require authentication via Bearer token.",
             "item": [
                 {
                     "name": "List Notifications",
@@ -208,31 +275,30 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/notifications?limit=20",
+                            "raw": "{{base_url}}/notifications?limit=20",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "notifications"
                             ],
                             "query": [
                                 {
                                     "key": "cursor",
                                     "value": "",
-                                    "description": "Cursor for pagination (notification ID)",
+                                    "description": "UUID of the last notification from previous page (for cursor-based pagination)",
                                     "disabled": true
                                 },
                                 {
                                     "key": "limit",
                                     "value": "20",
-                                    "description": "Number of notifications per page (1-50, default: 20)"
+                                    "description": "Number of notifications to return (1–50, default: 20)"
                                 }
                             ]
                         },
-                        "description": "Get paginated list of notifications for the authenticated user (newest first)."
-                    }
+                        "description": "Get a paginated list of notifications for the authenticated user (newest first).\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Notifications fetched successfully\",\n  \"data\": {\n    \"notifications\": [\n      {\n        \"id\": \"notif-uuid\",\n        \"type\": \"BOOKING_CONFIRMED\",\n        \"title\": \"Booking Confirmed!\",\n        \"body\": \"Your ride from Delhi to Agra has been confirmed.\",\n        \"data\": {\n          \"rideId\": \"ride-uuid\",\n          \"bookingId\": \"booking-uuid\"\n        },\n        \"isRead\": false,\n        \"readAt\": null,\n        \"createdAt\": \"2026-02-15T10:30:00Z\"\n      }\n    ],\n    \"nextCursor\": \"notif-uuid-last\",\n    \"hasMore\": true\n  }\n}\n```"
+                    },
+                    "response": []
                 },
                 {
                     "name": "Mark Notifications as Read",
@@ -246,45 +312,43 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"notificationIds\": [\n    \"{{notificationId}}\"\n  ]\n}"
+                            "raw": "{\n  \"notificationIds\": [\n    \"{{notification_id}}\"\n  ]\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/notifications/read",
+                            "raw": "{{base_url}}/notifications/read",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "notifications",
                                 "read"
                             ]
                         },
-                        "description": "Mark one or more notifications as read.\n\nFields:\n- `notificationIds` (required): Array of notification UUIDs (1-100 items)\n\nInvalidates the Redis unread count cache."
-                    }
+                        "description": "Mark specific notifications as read.\n\n### Body Parameters\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `notificationIds` | UUID[] | ✅ | Array of notification IDs to mark as read (1–100 items) |\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Notifications marked as read\",\n  \"data\": {\n    \"markedCount\": 3\n  }\n}\n```"
+                    },
+                    "response": []
                 },
                 {
-                    "name": "Get Unread Count",
+                    "name": "Get Unread Notification Count",
                     "request": {
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/notifications/unread-count",
+                            "raw": "{{base_url}}/notifications/unread-count",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "notifications",
                                 "unread-count"
                             ]
                         },
-                        "description": "Get unread notification count. Uses Redis cache (60s TTL) with DB fallback."
-                    }
+                        "description": "Get the total number of unread notifications for the authenticated user.\n\nUses **Redis cache** with 60s TTL for performance, falls back to database.\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Unread count fetched successfully\",\n  \"data\": {\n    \"unreadCount\": 12\n  }\n}\n```"
+                    },
+                    "response": []
                 },
                 {
-                    "name": "Register Device Token",
+                    "name": "Register Device for Push Notifications",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -295,23 +359,22 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"platform\": \"android\",\n  \"token\": \"fcm_device_token_from_firebase_sdk\"\n}"
+                            "raw": "{\n  \"platform\": \"android\",\n  \"token\": \"fcm-device-token-from-firebase-sdk\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/notifications/devices/register",
+                            "raw": "{{base_url}}/notifications/devices/register",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "notifications",
                                 "devices",
                                 "register"
                             ]
                         },
-                        "description": "Register a device token for push notifications (FCM / APNs).\n\nFields:\n- `platform` (required): 'android' or 'ios'\n- `token` (required): Device token from Firebase SDK\n\nUpserts — if the token already exists, updates userId and lastSeenAt."
-                    }
+                        "description": "Register a device token for push notifications (FCM/APNs).\n\nUpserts — if the token already exists, updates the associated user and `lastSeenAt`.\n\n### Body Parameters\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `platform` | string | ✅ | Device platform: `android` or `ios` |\n| `token` | string | ✅ | FCM/APNs device token from Firebase SDK |\n\n### Response (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Device registered successfully\",\n  \"data\": {\n    \"id\": \"device-token-uuid\",\n    \"userId\": \"user-uuid\",\n    \"platform\": \"android\",\n    \"token\": \"fcm-device-token...\",\n    \"lastSeenAt\": \"2026-02-15T10:30:00Z\",\n    \"createdAt\": \"2026-02-15T10:30:00Z\"\n  }\n}\n```\n\n### When to Call\n- On **app startup** (every time the app opens)\n- After **FCM token refresh** event\n- After **user login**"
+                    },
+                    "response": []
                 },
                 {
                     "name": "Remove Device Token",
@@ -319,27 +382,195 @@
                         "method": "DELETE",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/v1/notifications/devices/{{deviceTokenId}}",
+                            "raw": "{{base_url}}/notifications/devices/{{device_token_id}}",
                             "host": [
-                                "{{baseUrl}}"
+                                "{{base_url}}"
                             ],
                             "path": [
-                                "api",
-                                "v1",
                                 "notifications",
                                 "devices",
-                                "{{deviceTokenId}}"
+                                "{{device_token_id}}"
                             ]
                         },
-                        "description": "Remove a registered device token (e.g. on logout). Only the token owner can delete it."
-                    }
+                        "description": "Remove a device token to stop receiving push notifications on this device.\n\n### Path Parameters\n| Param | Type | Description |\n|---|---|---|\n| `tokenId` | UUID | The device token record ID (from register response) |\n\n### Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Device removed successfully\"\n}\n```\n\n### When to Call\n- On **user logout**\n- When user **disables push notifications**\n\n### Errors\n| Status | Message |\n|---|---|\n| 404 | Device token not found |"
+                    },
+                    "response": []
                 }
             ]
         },
         {
-            "name": "🔌 WebSocket Events Reference",
-            "description": "These are Socket.IO events, not REST endpoints. Connect via WebSocket with JWT auth token.\n\n**Connection:**\n```\nconst socket = io('http://localhost:3000', {\n  auth: { token: 'your-jwt-token' }\n});\n```\n\n**Chat Events (emit):**\n- `chat:send` — Send a message: `{ receiverId, text, clientMsgId, type? }`\n- `chat:typing` — Typing indicator: `{ conversationId, receiverId }`\n- `chat:stopTyping` — Stop typing: `{ conversationId, receiverId }`\n- `chat:delivered` — Delivery receipt: `{ messageId, conversationId }`\n- `chat:read` — Read receipt: `{ conversationId, lastReadMessageId }`\n- `chat:sync` — Sync missed messages: `{ lastMessageTs }`\n- `presence:ping` — Heartbeat\n- `presence:check` — Check user status: `{ userId }`\n\n**Chat Events (listen):**\n- `chat:message` — New message received\n- `chat:typing` — Peer is typing\n- `chat:stopTyping` — Peer stopped typing\n- `chat:delivered` — Message delivered\n- `chat:read` — Messages read\n- `chat:sync` — Missed messages batch\n- `presence:status` — User online/offline status\n\n**Notification Events (listen):**\n- `notification:new` — Real-time notification preview",
-            "item": []
+            "name": "⚡ Chat — WebSocket Events",
+            "description": "## WebSocket Events for Real-time Chat\n\nThese are **Socket.IO** events, NOT REST endpoints. They cannot be tested directly in Postman but are documented here for reference.\n\n### Connection\n```javascript\nimport { io } from 'socket.io-client';\n\nconst socket = io('http://localhost:3000', {\n  auth: { token: '<your_jwt_access_token>' }\n});\n\nsocket.on('connect', () => {\n  console.log('Connected:', socket.id);\n});\n```\n\n---\n\n### Auto-Sync on Connect\nWhen a user connects, the server automatically pushes any **undelivered messages** via the `chat:sync` event. The client should listen for this immediately after connecting.\n\n---\n\n### Flow Summary\n```\n1. Connect → auto-receive chat:sync (missed messages)\n2. Send message → chat:send (with ACK callback)\n3. Receive message → listen for chat:message\n4. Typing → emit chat:typing / chat:stopTyping\n5. Read receipt → emit chat:read\n6. Presence → emit presence:ping every 30s\n```",
+            "item": [
+                {
+                    "name": "chat:send → Send Message",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Client → Server\n\n**Event Name:** `chat:send`\n\nSend a chat message in real-time. Supports ACK callback for confirmation.\n\n### Emit Payload\n```json\n{\n  \"receiverId\": \"receiver-user-uuid\",\n  \"text\": \"Hey, I'm on my way!\",\n  \"clientMsgId\": \"unique-client-generated-id\",\n  \"type\": \"TEXT\"\n}\n```\n\n### Fields\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `receiverId` | UUID | ✅ | User ID of the recipient |\n| `text` | string | ✅ | Message content |\n| `clientMsgId` | string | ✅ | Client-generated unique ID (for idempotency & dedup) |\n| `type` | string | ❌ | `TEXT` (default), `IMAGE`, `FILE`, `SYSTEM` |\n\n### ACK Callback Response\n**Success:**\n```json\n{\n  \"success\": true,\n  \"message\": {\n    \"id\": \"server-generated-msg-uuid\",\n    \"conversationId\": \"conv-uuid\",\n    \"createdAt\": \"2026-02-15T10:30:00Z\"\n  }\n}\n```\n\n**Error:**\n```json\n{\n  \"error\": \"Chat is only available after a booking is confirmed\"\n}\n```\n\n### Client Code Example\n```javascript\nsocket.emit('chat:send', {\n  receiverId: 'user-uuid',\n  text: 'Hello!',\n  clientMsgId: crypto.randomUUID(),\n  type: 'TEXT'\n}, (ack) => {\n  if (ack.success) {\n    console.log('Message sent:', ack.message.id);\n  } else {\n    console.error('Error:', ack.error);\n  }\n});\n```\n\n### What Happens Server-Side\n1. Validates required fields\n2. Checks for confirmed booking between sender & receiver\n3. Checks `clientMsgId` for idempotency (returns existing msg if duplicate)\n4. Creates/finds conversation, saves message in DB (transaction)\n5. Sends ACK to sender\n6. If receiver is online → emits `chat:message` to receiver's socket(s)\n7. Auto-marks as delivered if receiver is online, sends `chat:delivered` back to sender"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "chat:message ← Receive Message",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Server → Client\n\n**Event Name:** `chat:message`\n\nReceived when another user sends you a message and you are online.\n\n### Payload Received\n```json\n{\n  \"id\": \"msg-uuid\",\n  \"conversationId\": \"conv-uuid\",\n  \"senderId\": \"sender-user-uuid\",\n  \"receiverId\": \"your-user-uuid\",\n  \"type\": \"TEXT\",\n  \"text\": \"Hey, I'm on my way!\",\n  \"clientMsgId\": \"sender-client-id\",\n  \"createdAt\": \"2026-02-15T10:30:00Z\"\n}\n```\n\n### Client Code Example\n```javascript\nsocket.on('chat:message', (message) => {\n  console.log('New message:', message.text);\n  // Add to chat UI\n  // Play notification sound\n  // Update conversation list\n});\n```"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "chat:typing → Typing Indicator",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Client → Server (forwarded to receiver) | Server → Client\n\n**Event Names:** `chat:typing` and `chat:stopTyping`\n\nShow/hide typing indicator for the other user.\n\n### Emit Payload (Client → Server)\n```json\n{\n  \"conversationId\": \"conv-uuid\",\n  \"receiverId\": \"other-user-uuid\"\n}\n```\n\n### Received Payload (Server → Client)\n```json\n{\n  \"conversationId\": \"conv-uuid\",\n  \"senderId\": \"typing-user-uuid\"\n}\n```\n\n### Client Code Example\n```javascript\n// Send typing indicator\nlet typingTimeout;\ninput.addEventListener('input', () => {\n  socket.emit('chat:typing', {\n    conversationId: 'conv-uuid',\n    receiverId: 'other-user-uuid'\n  });\n  \n  clearTimeout(typingTimeout);\n  typingTimeout = setTimeout(() => {\n    socket.emit('chat:stopTyping', {\n      conversationId: 'conv-uuid',\n      receiverId: 'other-user-uuid'\n    });\n  }, 2000);\n});\n\n// Listen for typing\nsocket.on('chat:typing', ({ conversationId, senderId }) => {\n  showTypingIndicator(conversationId, senderId);\n});\n\nsocket.on('chat:stopTyping', ({ conversationId, senderId }) => {\n  hideTypingIndicator(conversationId, senderId);\n});\n```"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "chat:delivered ← Delivery Receipt",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Server → Client (to message sender)\n\n**Event Name:** `chat:delivered`\n\nReceived by the sender when their message has been delivered to the receiver.\n\n### Payload Received\n```json\n{\n  \"messageId\": \"msg-uuid\",\n  \"conversationId\": \"conv-uuid\",\n  \"deliveredAt\": \"2026-02-15T10:30:05Z\"\n}\n```\n\n### Client Code Example\n```javascript\nsocket.on('chat:delivered', ({ messageId, deliveredAt }) => {\n  // Update message status: sent ✓ → delivered ✓✓\n  updateMessageStatus(messageId, 'delivered', deliveredAt);\n});\n```\n\n### When Does This Fire?\n- **Automatically** when the receiver's socket receives the message\n- The server emits this back to the sender immediately after delivering"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "chat:read → Read Receipt",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Client → Server | Server → Client (to message sender)\n\n**Event Name:** `chat:read`\n\n### Emit Payload (Reader → Server)\n```json\n{\n  \"conversationId\": \"conv-uuid\",\n  \"lastReadMessageId\": \"msg-uuid\"\n}\n```\n\n### Received Payload (Server → Sender)\n```json\n{\n  \"conversationId\": \"conv-uuid\",\n  \"readBy\": \"reader-user-uuid\",\n  \"lastReadMessageId\": \"msg-uuid\",\n  \"readAt\": \"2026-02-15T10:30:10Z\"\n}\n```\n\n### Client Code Example\n```javascript\n// When user reads messages in a conversation\nsocket.emit('chat:read', {\n  conversationId: 'conv-uuid',\n  lastReadMessageId: 'last-visible-msg-uuid'\n});\n\n// Listen for read receipts (as message sender)\nsocket.on('chat:read', ({ conversationId, readBy, lastReadMessageId, readAt }) => {\n  // Update message status: delivered ✓✓ → read (blue ✓✓)\n  markMessagesAsRead(conversationId, lastReadMessageId, readAt);\n});\n```\n\n### What Happens Server-Side\n1. Marks all messages in the conversation as read up to `lastReadMessageId`\n2. Also marks them as delivered (if not already)\n3. Notifies the sender via `chat:read` event"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "chat:sync ← Offline Message Sync",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Server → Client (auto on connect) | Client → Server (manual request)\n\n**Event Name:** `chat:sync`\n\n### Auto-Sync on Connect\nWhen a user connects, the server automatically pushes any **undelivered messages** (including IMAGE and LOCATION types):\n```json\n{\n  \"messages\": [\n    {\n      \"id\": \"msg-uuid\",\n      \"conversationId\": \"conv-uuid\",\n      \"senderId\": \"sender-uuid\",\n      \"receiverId\": \"your-uuid\",\n      \"type\": \"TEXT\",\n      \"text\": \"Hey, where are you?\",\n      \"payloadJson\": null,\n      \"clientMsgId\": \"client-123\",\n      \"deliveredAt\": null,\n      \"readAt\": null,\n      \"createdAt\": \"2026-02-15T08:00:00Z\"\n    },\n    {\n      \"id\": \"msg-uuid-2\",\n      \"conversationId\": \"conv-uuid\",\n      \"senderId\": \"sender-uuid\",\n      \"receiverId\": \"your-uuid\",\n      \"type\": \"LOCATION\",\n      \"text\": null,\n      \"payloadJson\": { \"latitude\": 28.61, \"longitude\": 77.20, \"address\": \"India Gate\" },\n      \"clientMsgId\": \"client-124\",\n      \"deliveredAt\": null,\n      \"readAt\": null,\n      \"createdAt\": \"2026-02-15T08:01:00Z\"\n    }\n  ]\n}\n```\n\n### Manual Sync (Client → Server)\nClient can manually request missed messages since a timestamp:\n\n**Emit Payload:**\n```json\n{\n  \"lastMessageTs\": \"2026-02-15T08:00:00Z\"\n}\n```\n\n**ACK Callback Response:**\n```json\n{\n  \"success\": true,\n  \"messages\": [ ... ]\n}\n```\n\n### Client Code Example\n```javascript\n// Auto-sync listener (fires on connect)\nsocket.on('chat:sync', ({ messages }) => {\n  messages.forEach(msg => {\n    switch (msg.type) {\n      case 'TEXT': addTextToChat(msg); break;\n      case 'IMAGE': addImageToChat(msg); break;\n      case 'LOCATION': addLocationToChat(msg); break;\n    }\n  });\n});\n```\n\n### Notes\n- Returns up to **100 messages** per sync to prevent huge payloads\n- After sync, messages are automatically marked as **delivered**\n- Includes all message types: TEXT, IMAGE, LOCATION, FILE"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "presence:ping → Heartbeat",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Client → Server\n\n**Event Name:** `presence:ping`\n\nKeep-alive heartbeat to maintain online presence status in Redis.\n\n### Emit Payload\nNo payload needed.\n\n### Client Code Example\n```javascript\n// Send heartbeat every 30 seconds\nsetInterval(() => {\n  socket.emit('presence:ping');\n}, 30000);\n```\n\n### Notes\n- Refreshes the user's online status TTL in Redis\n- If heartbeat stops, the user will eventually be marked as offline"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "presence:check → Check User Online Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "chat"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Client → Server (with ACK callback)\n\n**Event Name:** `presence:check`\n\nCheck if another user is currently online.\n\n### Emit Payload\n```json\n{\n  \"userId\": \"target-user-uuid\"\n}\n```\n\n### ACK Callback Response\n```json\n{\n  \"userId\": \"target-user-uuid\",\n  \"online\": true,\n  \"lastSeen\": \"2026-02-15T10:30:00Z\"\n}\n```\n\n### Client Code Example\n```javascript\nsocket.emit('presence:check', {\n  userId: 'driver-user-uuid'\n}, (result) => {\n  if (result.online) {\n    showOnlineIndicator();\n  } else {\n    showLastSeen(result.lastSeen);\n  }\n});\n```"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "🔔 Notifications — WebSocket Events",
+            "description": "## WebSocket Events for Real-time Notifications\n\nNotifications are delivered via WebSocket when the user is **online**. If the user is **offline**, they are sent as **push notifications** via FCM/APNs automatically.\n\nNo client action is needed to receive these — just listen for the event.",
+            "item": [
+                {
+                    "name": "notification:new ← Receive Notification",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/notifications",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications"
+                            ]
+                        },
+                        "description": "## ⚡ WebSocket Event — NOT a REST endpoint\n\n**Direction:** Server → Client\n\n**Event Name:** `notification:new`\n\nReceived in real-time when a new notification is created for the user (e.g., booking confirmed, ride cancelled, new message from offline context).\n\n### Payload Received\n```json\n{\n  \"type\": \"notification.new\",\n  \"data\": {\n    \"id\": \"notif-uuid\",\n    \"title\": \"Booking Confirmed!\",\n    \"body\": \"Your ride from Delhi to Agra has been confirmed.\",\n    \"notificationType\": \"BOOKING_CONFIRMED\",\n    \"data\": {\n      \"rideId\": \"ride-uuid\",\n      \"bookingId\": \"booking-uuid\"\n    },\n    \"preview\": true,\n    \"createdAt\": \"2026-02-15T10:30:00Z\"\n  }\n}\n```\n\n### Common Notification Types\n| Type | When |\n|---|---|\n| `BOOKING_CONFIRMED` | A booking is confirmed |\n| `BOOKING_CANCELLED` | A booking is cancelled |\n| `RIDE_STARTED` | Driver starts the ride |\n| `RIDE_COMPLETED` | Ride is completed |\n| `NEW_BOOKING_REQUEST` | Driver receives a new booking request |\n| `PAYMENT_RECEIVED` | Payment is processed |\n\n### Client Code Example\n```javascript\nsocket.on('notification:new', (payload) => {\n  const { data } = payload;\n  \n  // Show in-app notification toast\n  showToast(data.title, data.body);\n  \n  // Update notification badge count\n  incrementBadge();\n  \n  // Navigate based on notification type\n  if (data.notificationType === 'BOOKING_CONFIRMED') {\n    navigateToBooking(data.data.bookingId);\n  }\n});\n```\n\n### Delivery Logic\n1. **User is ONLINE** (has active socket connection) → Delivered via this WebSocket event\n2. **User is OFFLINE** (no socket connection) → Delivered via **FCM/APNs push notification** automatically"
+                    },
+                    "response": []
+                }
+            ]
         }
     ]
 }

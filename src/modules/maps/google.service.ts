@@ -15,15 +15,15 @@ function isBreakerOpen(err: any) {
 }
 
 export const googleService = {
-  async autocomplete(input: string, location?: { lat: number; lng: number }, radius?: number) {
-    const cacheKey = `autocomplete:${input}:${location ? `${location.lat},${location.lng}` : 'none'}:${radius || 50000}`;
+  async autocomplete(input: string, location?: { lat: number; lng: number }, radius?: number, types?: string) {
+    const cacheKey = `autocomplete:${input}:${location ? `${location.lat},${location.lng}` : 'none'}:${radius || 50000}:${types || 'all'}`;
 
     // Try to get from cache
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
     // Fetch from Google API
-    const response: any = await googleHttp.autocomplete({ input, location, radius });
+    const response: any = await googleHttp.autocomplete({ input, location, radius, types });
     console.log(response);
 
     const predictions = response.predictions;
