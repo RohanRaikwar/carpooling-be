@@ -1,6 +1,6 @@
 import { prisma } from '../../config/index.js';
 import { BookingStatus } from '@prisma/client';
-import type { SendMessageInput } from './chat.types.js';
+import type { SendMessageInput, ImagePayload, LocationPayload } from './chat.types.js';
 
 // ============ HELPERS ============
 
@@ -10,6 +10,24 @@ import type { SendMessageInput } from './chat.types.js';
  */
 const normalizePair = (id1: string, id2: string): [string, string] => {
     return id1 < id2 ? [id1, id2] : [id2, id1];
+};
+
+/**
+ * Generate a preview string for the conversation list based on message type.
+ */
+const getMessagePreview = (type: string, text?: string | null): string => {
+    switch (type) {
+        case 'IMAGE':
+            return text ? `📷 ${text.substring(0, 80)}` : '📷 Image';
+        case 'LOCATION':
+            return text ? `📍 ${text.substring(0, 80)}` : '📍 Location';
+        case 'FILE':
+            return text ? `📎 ${text.substring(0, 80)}` : '📎 File';
+        case 'SYSTEM':
+            return text ? text.substring(0, 100) : '[System]';
+        default:
+            return text ? text.substring(0, 100) : '';
+    }
 };
 
 /**
@@ -139,6 +157,10 @@ export const getConversations = async (
  * Send a message. Creates conversation if it doesn't exist.
  * Requires a confirmed booking between sender and receiver.
  * Uses a transaction to ensure atomicity.
+ *
+ * Supports TEXT, IMAGE, LOCATION, FILE, and SYSTEM types.
+ * - For IMAGE: payloadJson should contain ImagePayload (imageUrl, etc.)
+ * - For LOCATION: payloadJson should contain LocationPayload (latitude, longitude, etc.)
  */
 export const sendMessage = async (senderId: string, data: SendMessageInput) => {
     const { receiverId, text, clientMsgId, type = 'TEXT', payloadJson } = data;
@@ -152,6 +174,20 @@ export const sendMessage = async (senderId: string, data: SendMessageInput) => {
     const canChat = await hasConfirmedBooking(senderId, receiverId);
     if (!canChat) {
         throw new Error('NO_CONFIRMED_BOOKING');
+    }
+
+    // Validate message content based on type
+    if (type === 'TEXT' && !text) {
+        throw new Error('TEXT_REQUIRED');
+    }
+    if (type === 'IMAGE' && !(payloadJson as unknown as ImagePayload)?.imageUrl) {
+        throw new Error('IMAGE_URL_REQUIRED');
+    }
+    if (type === 'LOCATION') {
+        const loc = payloadJson as unknown as LocationPayload;
+        if (!loc || typeof loc.latitude !== 'number' || typeof loc.longitude !== 'number') {
+            throw new Error('LOCATION_REQUIRED');
+        }
     }
 
     // Check for idempotency — if clientMsgId already exists, return existing message
@@ -173,7 +209,7 @@ export const sendMessage = async (senderId: string, data: SendMessageInput) => {
                 senderId,
                 receiverId,
                 type: type as any,
-                text,
+                text: text || null,
                 payloadJson: payloadJson ? (payloadJson as any) : undefined,
                 clientMsgId,
             },
@@ -184,7 +220,7 @@ export const sendMessage = async (senderId: string, data: SendMessageInput) => {
             where: { id: conversation.id },
             data: {
                 lastMsgAt: msg.createdAt,
-                lastMsgPreview: text ? text.substring(0, 100) : `[${type}]`,
+                lastMsgPreview: getMessagePreview(type, text),
             },
         });
 

@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import { validate } from '../../middlewares/validate.js';
+import { uploadSingleImage } from '../../middlewares/upload.middleware.js';
 import * as controller from './chat.controller.js';
 import {
     getConversationsQuerySchema,
     getMessagesQuerySchema,
     conversationIdParamSchema,
     sendMessageSchema,
+    sendImageSchema,
+    sendLocationSchema,
     markReadSchema,
 } from './chat.validator.js';
 
@@ -31,11 +34,26 @@ router.get(
     controller.getMessages,
 );
 
-// Send a message
+// Send a text message
 router.post(
     '/send',
     validate({ body: sendMessageSchema }),
     controller.sendMessage,
+);
+
+// Send an image message (multipart form upload)
+router.post(
+    '/send-image',
+    uploadSingleImage,
+    validate({ body: sendImageSchema }),
+    controller.sendImage,
+);
+
+// Send a location message
+router.post(
+    '/send-location',
+    validate({ body: sendLocationSchema }),
+    controller.sendLocation,
 );
 
 // Mark messages as read in a conversation

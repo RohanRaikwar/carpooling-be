@@ -189,6 +189,7 @@ enum MessageType {
   TEXT
   IMAGE
   FILE
+  LOCATION
   SYSTEM
 }
 
@@ -200,13 +201,13 @@ model Ride {
   driver    User    @relation(fields: [driverId], references: [id], onDelete: Cascade)
   vehicleId String?
 
-  // Origin details
+  // Origin city details
   originPlaceId  String
   originAddress  String
   originLat      Float
   originLng      Float
 
-  // Destination details
+  // Destination city details
   destinationPlaceId  String
   destinationAddress  String
   destinationLat      Float
@@ -226,6 +227,10 @@ model Ride {
   availableSeats   Int
   basePricePerSeat Float
   currency         String @default("GBP")
+
+  // Luggage & seating preferences
+  maxLuggagePerPerson Int     @default(2)
+  backSeatOnly        Boolean @default(false)
 
   // Additional info
   notes String?

@@ -67,6 +67,7 @@ export const autocompleteSchema = z.object({
     })
     .optional(),
   radius: z.number().min(1).max(50000).optional(),
+  types: z.string().optional(),
 });
 
 /**

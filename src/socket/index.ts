@@ -130,18 +130,36 @@ export const initSocket = async (server: http.Server) => {
         // ============ CHAT: SEND MESSAGE ============
         socket.on('chat:send', async (data, callback) => {
             try {
-                const { receiverId, text, clientMsgId, type } = data;
+                const { receiverId, text, clientMsgId, type, payloadJson } = data;
 
-                if (!receiverId || !text || !clientMsgId) {
-                    return callback?.({ error: 'Missing required fields: receiverId, text, clientMsgId' });
+                if (!receiverId || !clientMsgId) {
+                    return callback?.({ error: 'Missing required fields: receiverId, clientMsgId' });
+                }
+
+                const msgType = type || 'TEXT';
+
+                // Validate based on message type
+                if (msgType === 'TEXT' && !text) {
+                    return callback?.({ error: 'Text is required for text messages' });
+                }
+
+                if (msgType === 'LOCATION') {
+                    if (!payloadJson?.latitude || !payloadJson?.longitude) {
+                        return callback?.({ error: 'latitude and longitude are required for location messages' });
+                    }
+                }
+
+                if (msgType === 'IMAGE') {
+                    return callback?.({ error: 'Use REST endpoint POST /chat/send-image for image uploads' });
                 }
 
                 // Persist message
                 const message = await ChatService.sendMessage(userId, {
                     receiverId,
-                    text,
+                    text: text || undefined,
                     clientMsgId,
-                    type: type || 'TEXT',
+                    type: msgType,
+                    payloadJson: payloadJson || undefined,
                 });
 
                 // ACK to sender
@@ -150,6 +168,7 @@ export const initSocket = async (server: http.Server) => {
                     message: {
                         id: message.id,
                         conversationId: message.conversationId,
+                        type: message.type,
                         createdAt: message.createdAt,
                     },
                 });
@@ -164,6 +183,7 @@ export const initSocket = async (server: http.Server) => {
                         receiverId,
                         type: message.type,
                         text: message.text,
+                        payloadJson: message.payloadJson,
                         clientMsgId: message.clientMsgId,
                         createdAt: message.createdAt,
                     };
@@ -190,7 +210,9 @@ export const initSocket = async (server: http.Server) => {
                         ? 'Chat is only available after a booking is confirmed'
                         : error.message === 'CANNOT_MESSAGE_SELF'
                             ? 'You cannot send a message to yourself'
-                            : 'Failed to send message';
+                            : error.message === 'LOCATION_REQUIRED'
+                                ? 'Valid latitude and longitude are required for location messages'
+                                : 'Failed to send message';
                 callback?.({ error: errorMsg });
             }
         });

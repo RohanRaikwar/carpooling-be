@@ -2,6 +2,8 @@ import { Response } from 'express';
 import * as ChatService from './chat.service.js';
 import { AuthRequest } from '../../middlewares/authMiddleware.js';
 import { sendSuccess, sendError, HttpStatus } from '../../utils/index.js';
+import { uploadToS3 } from '../../services/s3.service.js';
+import type { ImagePayload, LocationPayload } from './chat.types.js';
 
 /* ================= LIST CONVERSATIONS ================= */
 export const getConversations = async (req: AuthRequest, res: Response) => {
@@ -53,7 +55,7 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
     }
 };
 
-/* ================= SEND MESSAGE ================= */
+/* ================= SEND MESSAGE (TEXT) ================= */
 export const sendMessage = async (req: AuthRequest, res: Response) => {
     try {
         const message = await ChatService.sendMessage(req.user.id, req.body);
@@ -75,6 +77,121 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
             case 'NO_CONFIRMED_BOOKING':
                 status = HttpStatus.FORBIDDEN;
                 message = 'Chat is only available after a booking is confirmed between rider and driver';
+                break;
+            case 'TEXT_REQUIRED':
+                status = HttpStatus.BAD_REQUEST;
+                message = 'Text is required for text messages';
+                break;
+        }
+
+        return sendError(res, { status, message });
+    }
+};
+
+/* ================= SEND IMAGE ================= */
+export const sendImage = async (req: AuthRequest, res: Response) => {
+    try {
+        // Validate file exists (multer should have populated req.file)
+        if (!req.file) {
+            return sendError(res, {
+                status: HttpStatus.BAD_REQUEST,
+                message: 'Image file is required',
+            });
+        }
+
+        // Upload image to S3
+        const uploadResult = await uploadToS3({ folder: 'chat', file: req.file });
+
+        if (!uploadResult.success || !uploadResult.url) {
+            return sendError(res, {
+                status: HttpStatus.INTERNAL_ERROR,
+                message: uploadResult.error || 'Failed to upload image',
+            });
+        }
+
+        // Build image payload
+        const imagePayload: ImagePayload = {
+            imageUrl: uploadResult.url,
+            mimeType: req.file.mimetype,
+            fileSize: req.file.size,
+        };
+
+        // Send message with IMAGE type
+        const message = await ChatService.sendMessage(req.user.id, {
+            receiverId: req.body.receiverId,
+            clientMsgId: req.body.clientMsgId,
+            text: req.body.text || undefined,
+            type: 'IMAGE',
+            payloadJson: imagePayload as any,
+        });
+
+        return sendSuccess(res, {
+            status: HttpStatus.CREATED,
+            message: 'Image message sent successfully',
+            data: message,
+        });
+    } catch (error: any) {
+        let status = HttpStatus.INTERNAL_ERROR;
+        let message = 'Failed to send image message';
+
+        switch (error.message) {
+            case 'CANNOT_MESSAGE_SELF':
+                status = HttpStatus.BAD_REQUEST;
+                message = 'You cannot send a message to yourself';
+                break;
+            case 'NO_CONFIRMED_BOOKING':
+                status = HttpStatus.FORBIDDEN;
+                message = 'Chat is only available after a booking is confirmed between rider and driver';
+                break;
+        }
+
+        return sendError(res, { status, message });
+    }
+};
+
+/* ================= SEND LOCATION ================= */
+export const sendLocation = async (req: AuthRequest, res: Response) => {
+    try {
+        const { receiverId, clientMsgId, latitude, longitude, address, placeId, text } = req.body;
+
+        // Build location payload
+        const locationPayload: LocationPayload = {
+            latitude,
+            longitude,
+            ...(address && { address }),
+            ...(placeId && { placeId }),
+        };
+
+        // Send message with LOCATION type
+        const message = await ChatService.sendMessage(req.user.id, {
+            receiverId,
+            clientMsgId,
+            text: text || undefined,
+            type: 'LOCATION',
+            payloadJson: locationPayload as any,
+        });
+
+        return sendSuccess(res, {
+            status: HttpStatus.CREATED,
+            message: 'Location message sent successfully',
+            data: message,
+        });
+    } catch (error: any) {
+        let status = HttpStatus.INTERNAL_ERROR;
+        let message = 'Failed to send location message';
+
+        switch (error.message) {
+            case 'CANNOT_MESSAGE_SELF':
+                status = HttpStatus.BAD_REQUEST;
+                message = 'You cannot send a message to yourself';
+                break;
+            case 'NO_CONFIRMED_BOOKING':
+                status = HttpStatus.FORBIDDEN;
+                message = 'Chat is only available after a booking is confirmed between rider and driver';
+                break;
+            case 'LOCATION_REQUIRED':
+                status = HttpStatus.BAD_REQUEST;
+                message = 'Valid latitude and longitude are required';
                 break;
         }
 

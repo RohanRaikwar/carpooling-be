@@ -6,13 +6,14 @@ export const googleController = {
   /* ================= ROUTES ================= */
   async autocomplete(req: Request, res: Response) {
     try {
-      const { input, lat, lng, radius } = req.query as any;
+      const { input, lat, lng, radius, types } = req.query as any;
       const location = lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : undefined;
 
       const predictions = await googleService.autocomplete(
         input,
         location,
         radius ? parseInt(radius) : undefined,
+        types || undefined,
       );
 
       // Return only name, description, and placeId
