@@ -11,6 +11,8 @@ const transporter = nodemailer.createTransport({
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
   },
+  connectionTimeout: 5000, // 5s – fail fast if SMTP is unreachable
+  greetingTimeout: 5000,
 });
 
 export const verifyMailer = async (): Promise<void> => {
