@@ -1,43 +1,40 @@
-# Railway Deployment (API + Workers with Docker)
+# Railway Deployment
 
-This project now supports one Docker image that can run 3 process types:
+This repo is set up to deploy to Railway as 3 app services built from the same `Dockerfile`:
 
-- `api`
-- `mail-worker`
-- `sms-worker`
+- `carpooling-api`
+- `carpooling-mail-worker`
+- `carpooling-sms-worker`
 
-The process is selected with `PROCESS_TYPE` environment variable.
+Each service uses the same image and switches behavior with `PROCESS_TYPE`.
 
-## 1) Local Docker (quick check)
+Template files derived from the local `.env` layout are included here:
 
-```bash
-docker compose up --build -d
-docker compose logs -f api
-docker compose logs -f mail-worker
-docker compose logs -f sms-worker
-```
+- `railway.shared.env.example`
+- `railway.api.env.example`
+- `railway.mail-worker.env.example`
+- `railway.sms-worker.env.example`
 
-## 2) Railway Setup
+## 1. Create Railway Services
 
-Create these Railway services from the same GitHub repo and same `Dockerfile`:
-
-1. `carpooling-api`
-2. `carpooling-mail-worker`
-3. `carpooling-sms-worker`
-
-Also provision Railway database services:
+In one Railway project, provision:
 
 1. PostgreSQL
 2. Redis
+3. `carpooling-api`
+4. `carpooling-mail-worker`
+5. `carpooling-sms-worker`
 
-## 3) Required Variables
+Point all 3 app services at this repo and let Railway build from the root `Dockerfile`.
 
-Set these on **all 3 app services**:
+## 2. Shared Variables
+
+Set these on all 3 app services:
 
 - `NODE_ENV=production`
 - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
 - `REDIS_URL=${{Redis.REDIS_URL}}`
-- `JWT_SECRET=...`
+- `ACCESS_TOKEN_SECRET=...`
 - `REFRESH_TOKEN_SECRET=...`
 - `MAIL_HOST=...`
 - `MAIL_PORT=...`
@@ -52,27 +49,71 @@ Set these on **all 3 app services**:
 - `AWS_REGION=...`
 - `AWS_S3_BUCKET_NAME=...`
 - `GOOGLE_MAPS_API_KEY=...`
-- `FIREBASE_SERVICE_ACCOUNT_PATH=...` (or `GOOGLE_APPLICATION_CREDENTIALS`)
 
-Set this per service:
+Optional compatibility variable:
 
-- API service: `PROCESS_TYPE=api`
-- Mail service: `PROCESS_TYPE=mail-worker`
-- SMS service: `PROCESS_TYPE=sms-worker`
+- `JWT_SECRET=...`
 
-API service also needs:
+`ACCESS_TOKEN_SECRET` is now the canonical access-token secret. `JWT_SECRET` is only kept as a legacy fallback for older environments.
 
-- `PORT=${{PORT}}`
+## 3. Firebase Configuration
 
-## 4) Deploy and Verify
+For Railway, prefer one of these:
 
-After deploy:
+- `FIREBASE_SERVICE_ACCOUNT_JSON=...`
+- `FIREBASE_SERVICE_ACCOUNT_BASE64=...`
 
-1. API logs should show server boot (`Server running on port ...`).
-2. Mail worker logs should show `Mail worker booting`.
-3. SMS worker logs should show `SMS worker booting`.
-4. Queue jobs created by API should be consumed by worker services.
+Local file-based fallback is still supported:
 
-## 5) Scaling Workers
+- `FIREBASE_SERVICE_ACCOUNT_PATH=...`
+- `GOOGLE_APPLICATION_CREDENTIALS=...`
 
-To increase throughput, scale `carpooling-mail-worker` and `carpooling-sms-worker` independently in Railway.
+If Firebase is not configured, the app will still boot, but push notifications will be disabled.
+
+## 4. Per-Service Variables
+
+Set this on each service:
+
+- API: `PROCESS_TYPE=api`
+- Mail worker: `PROCESS_TYPE=mail-worker`
+- SMS worker: `PROCESS_TYPE=sms-worker`
+
+Do not manually set `PORT` on Railway. Railway injects it for web services.
+
+## 5. Railway Service Settings
+
+For `carpooling-api`:
+
+1. Set the healthcheck path to `/health`
+2. Add a pre-deploy command:
+
+```bash
+npx prisma migrate deploy
+```
+
+3. Generate a Railway domain or attach a custom domain
+
+For the worker services, no HTTP healthcheck is needed.
+
+## 6. Deploy Verification
+
+After deployment:
+
+1. API logs should show the server booting on the Railway-assigned port
+2. Hitting `/health` should return `{"status":"ok"}`
+3. Mail worker logs should show the worker process starting
+4. SMS worker logs should show the worker process starting
+5. Jobs enqueued by the API should be consumed by the worker services
+
+## 7. Local Docker Check
+
+To verify the container image locally before Railway:
+
+```bash
+docker compose up --build -d
+docker compose logs -f api
+docker compose logs -f mail-worker
+docker compose logs -f sms-worker
+```
+
+`docker-compose.yml` is only for local development. On Railway, use Railway-managed PostgreSQL and Redis instead of the local Compose database containers.

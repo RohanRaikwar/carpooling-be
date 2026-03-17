@@ -45,7 +45,6 @@ export const verifyAccessToken = (token: string): DecodedToken => {
  * Verify Refresh Token
  */
 export const verifyRefreshToken = async (token: string): Promise<DecodedToken> => {
-  console.log(token, REFRESH_TOKEN_SECRET, 'jj');
   const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as DecodedToken;
   return decoded;
 };

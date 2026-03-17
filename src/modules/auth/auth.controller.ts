@@ -59,8 +59,6 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    console.log(err, "jj");
-
     if (err.message === 'USER_EXISTS') {
       return sendError(res, {
         status: HttpStatus.CONFLICT,
@@ -115,10 +113,8 @@ export const requestOtp = async (req: Request, res: Response) => {
 export const verifyOtpCont = async (req: Request, res: Response) => {
   try {
     const { identifier, code, purpose, method } = req.body;
-    console.log(purpose, "purpose", req.body);
 
     const verifyResult = await verifyOtp(identifier, purpose, code, method);
-    console.log(verifyResult, 'verifyResult');
 
     if (!verifyResult.success) {
       let errorMessage: string;
@@ -135,9 +131,7 @@ export const verifyOtpCont = async (req: Request, res: Response) => {
         message: errorMessage,
       });
     }
-    console.log(verifyResult, 'ufgu');
     const result = await verifyOtpService(identifier, code, purpose, method);
-    console.log(result, 'ufgu');
     if ('success' in result && !result.success) {
       return sendError(res, {
         status: HttpStatus.BAD_REQUEST,
