@@ -101,7 +101,6 @@ export const verifyOtpService = async (
 export const refreshTokenService = async (refreshToken: string) => {
   try {
     const decoded = await verifyRefreshToken(refreshToken);
-    console.log(decoded);
 
     if (!decoded) {
       return { success: false, reason: 'INVALID_REFRESH' };
@@ -128,7 +127,6 @@ export const refreshTokenService = async (refreshToken: string) => {
     const user = await prisma.user.findFirst({
       where: { id: decoded.id },
     });
-    console.log(user);
 
     if (!user) {
       return { success: false, reason: 'USER_NOT_FOUND' };
@@ -186,7 +184,6 @@ export const logoutService = async (refreshToken: string) => {
       where: { token: refreshToken },
       data: { revoked: true },
     });
-    console.log(data);
 
     if (data.count == 0) {
       return { success: false, reason: 'Token not found' };

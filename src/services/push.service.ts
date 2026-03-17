@@ -9,35 +9,64 @@ import logger from '../utils/logger.js';
 let firebaseInitialized = false;
 
 /**
- * Initialize Firebase Admin SDK.
- * Requires FIREBASE_SERVICE_ACCOUNT_PATH env variable pointing to the
- * service account JSON file, or GOOGLE_APPLICATION_CREDENTIALS set.
+ * Initialize Firebase Admin SDK from a JSON env var, base64 env var,
+ * local file path, or GOOGLE_APPLICATION_CREDENTIALS.
  */
+const loadServiceAccount = (): { serviceAccount: admin.ServiceAccount; source: string } | null => {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (serviceAccountJson) {
+        return {
+            serviceAccount: JSON.parse(serviceAccountJson) as admin.ServiceAccount,
+            source: 'FIREBASE_SERVICE_ACCOUNT_JSON',
+        };
+    }
+
+    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+    if (serviceAccountBase64) {
+        return {
+            serviceAccount: JSON.parse(
+                Buffer.from(serviceAccountBase64, 'base64').toString('utf-8'),
+            ) as admin.ServiceAccount,
+            source: 'FIREBASE_SERVICE_ACCOUNT_BASE64',
+        };
+    }
+
+    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    if (serviceAccountPath) {
+        const resolvedPath = path.resolve(serviceAccountPath);
+        return {
+            serviceAccount: JSON.parse(fs.readFileSync(resolvedPath, 'utf-8')) as admin.ServiceAccount,
+            source: `FIREBASE_SERVICE_ACCOUNT_PATH (${resolvedPath})`,
+        };
+    }
+
+    return null;
+};
+
 const initFirebase = () => {
     if (firebaseInitialized) return;
 
     try {
-        const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+        const serviceAccountConfig = loadServiceAccount();
 
-        if (serviceAccountPath) {
-            // Initialize with explicit service account file (ESM-compatible)
-            const resolvedPath = path.resolve(serviceAccountPath);
-            const serviceAccount = JSON.parse(fs.readFileSync(resolvedPath, 'utf-8'));
+        if (serviceAccountConfig) {
             admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
+                credential: admin.credential.cert(serviceAccountConfig.serviceAccount),
             });
+            logger.info(`Firebase Admin SDK initialized using ${serviceAccountConfig.source}`);
         } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            // Initialize with default credentials (env var points to JSON)
             admin.initializeApp({
                 credential: admin.credential.applicationDefault(),
             });
+            logger.info('Firebase Admin SDK initialized using GOOGLE_APPLICATION_CREDENTIALS');
         } else {
-            logger.warn('⚠️ Firebase not configured — push notifications disabled. Set FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS.');
+            logger.warn(
+                'Firebase not configured; push notifications disabled. Set FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_BASE64, FIREBASE_SERVICE_ACCOUNT_PATH, or GOOGLE_APPLICATION_CREDENTIALS.',
+            );
             return;
         }
 
         firebaseInitialized = true;
-        logger.info('✅ Firebase Admin SDK initialized');
     } catch (error) {
         logger.error('Firebase initialization error:', error);
     }

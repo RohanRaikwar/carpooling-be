@@ -6,8 +6,7 @@ import http from 'http';
 import logger from '../utils/logger.js';
 import * as ChatService from '../modules/chat/chat.service.js';
 import * as PresenceService from '../services/presence.service.js';
-
-const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'access_secret';
+import { ACCESS_TOKEN_SECRET } from '../modules/token/tokens.constants.js';
 
 // ============ USER-SOCKET MAPPING ============
 // Map userId -> Set<socketId> (user can have multiple devices/tabs)
@@ -62,8 +61,12 @@ export const initSocket = async (server: http.Server) => {
 
     // Setup Redis adapter for horizontal scaling
     try {
+        const redisUrl =
+            process.env.REDIS_URL ||
+            `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`;
+
         const pubClient = createClient({
-            url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+            url: redisUrl,
         });
         const subClient = pubClient.duplicate();
         await Promise.all([pubClient.connect(), subClient.connect()]);

@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { Tokens, DecodedToken } from './tokens.types.js';
-import { RefreshToken } from '../../models/index.js';
 import { prisma } from '../../config/index.js';
 
 import {
@@ -46,7 +45,6 @@ export const verifyAccessToken = (token: string): DecodedToken => {
  * Verify Refresh Token
  */
 export const verifyRefreshToken = async (token: string): Promise<DecodedToken> => {
-  console.log(token, REFRESH_TOKEN_SECRET, 'jj');
   const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as DecodedToken;
   return decoded;
 };
@@ -55,5 +53,8 @@ export const verifyRefreshToken = async (token: string): Promise<DecodedToken> =
  * Revoke Refresh Token
  */
 export const revokeRefreshToken = async (token: string) => {
-  await RefreshToken.findOneAndUpdate({ token }, { revoked: true });
+  await prisma.refreshToken.updateMany({
+    where: { token },
+    data: { revoked: true },
+  });
 };

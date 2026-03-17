@@ -3,16 +3,23 @@ import Redis from 'ioredis';
 const REDIS_HOST = process.env.REDIS_HOST || '127.0.0.1';
 const REDIS_PORT = Number(process.env.REDIS_PORT) || 6379;
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
+const REDIS_URL = process.env.REDIS_URL;
 
-// Create Redis client
-const redis = new Redis({
-  host: REDIS_HOST,
-  port: Number(REDIS_PORT),
-  password: REDIS_PASSWORD,
-  retryStrategy(times) {
+const baseRedisOptions = {
+  retryStrategy(times: number) {
     return Math.min(times * 50, 2000);
   },
-});
+};
+
+// Create Redis client (supports Railway REDIS_URL and local host/port config)
+const redis = REDIS_URL
+  ? new Redis(REDIS_URL, baseRedisOptions)
+  : new Redis({
+      host: REDIS_HOST,
+      port: REDIS_PORT,
+      password: REDIS_PASSWORD,
+      ...baseRedisOptions,
+    });
 
 export default redis;
 // Event listeners
