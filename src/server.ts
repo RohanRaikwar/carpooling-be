@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import { verifyMailer } from './config/index.js';
+import { verifyDatabaseConnection, verifyMailer } from './config/index.js';
 import http from 'http';
 import app from './app.js';
 import logger from './utils/logger.js';
@@ -14,6 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
+    await verifyDatabaseConnection();
+
     const server = http.createServer(app);
     await initSocket(server);
 
@@ -30,4 +32,3 @@ const startServer = async () => {
 };
 
 startServer();
-
