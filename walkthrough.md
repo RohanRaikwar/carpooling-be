@@ -8,7 +8,7 @@ This guide explains how to run the authentication tests and test the authenticat
 ## 1. Running the Tests
 
 ### Prerequisites
-- MongoDB running (locally or via Docker)
+- PostgreSQL running (locally or via Docker)
 - Redis running (locally or via Docker)
 - Node.js installed
 
@@ -44,8 +44,9 @@ Create a `.env` file in the root directory:
 
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/carpooling
-REDIS_URL=redis://localhost:6379
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/carpooling
+REDIS_HOST=localhost
+REDIS_PORT=6379
 JWT_SECRET=your_jwt_secret_key_here
 REFRESH_TOKEN_SECRET=your_refresh_token_secret_here
 NODE_ENV=development
@@ -63,7 +64,6 @@ npm start
 You should see:
 ```
 Server running on port 3000
-MongoDB connected
 Redis connected
 ```
 

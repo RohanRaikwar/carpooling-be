@@ -62,8 +62,12 @@ export const initSocket = async (server: http.Server) => {
 
     // Setup Redis adapter for horizontal scaling
     try {
+        const redisUrl =
+            process.env.REDIS_URL ||
+            `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`;
+
         const pubClient = createClient({
-            url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+            url: redisUrl,
         });
         const subClient = pubClient.duplicate();
         await Promise.all([pubClient.connect(), subClient.connect()]);

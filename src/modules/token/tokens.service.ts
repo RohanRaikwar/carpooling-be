@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { Tokens, DecodedToken } from './tokens.types.js';
-import { RefreshToken } from '../../models/index.js';
 import { prisma } from '../../config/index.js';
 
 import {
@@ -55,5 +54,8 @@ export const verifyRefreshToken = async (token: string): Promise<DecodedToken> =
  * Revoke Refresh Token
  */
 export const revokeRefreshToken = async (token: string) => {
-  await RefreshToken.findOneAndUpdate({ token }, { revoked: true });
+  await prisma.refreshToken.updateMany({
+    where: { token },
+    data: { revoked: true },
+  });
 };

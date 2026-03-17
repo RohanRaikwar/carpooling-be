@@ -59,6 +59,8 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
+    console.log(err, "jj");
+
     if (err.message === 'USER_EXISTS') {
       return sendError(res, {
         status: HttpStatus.CONFLICT,

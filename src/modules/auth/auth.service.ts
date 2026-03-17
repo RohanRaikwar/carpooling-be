@@ -1,3 +1,4 @@
+import { log } from 'console';
 import { prisma } from '../../config/index.js';
 import { generateTokens, verifyRefreshToken } from '../token/tokens.service.js';
 import { Role } from '../user/user.constants.js';
@@ -9,6 +10,7 @@ export const signupService = async (method: string, identifier: string) => {
   const user = await prisma.user.findFirst({
     where: { [method]: identifier },
   });
+  console.log(user, "user");
 
   // User exists & already verified → block signup
   if (user && user.isVerified) {
@@ -206,6 +208,7 @@ export const loginService = async (method: string, identifier: string) => {
   const user = await prisma.user.findFirst({
     where: { [method]: identifier },
   });
+  console.log(user, "userlogin", method, identifier)
 
   if (!user || !user.isVerified) {
     return {
