@@ -15,6 +15,13 @@ const transporter = nodemailer.createTransport({
   greetingTimeout: 5000,
 });
 
+logger.info('Mailer config loaded', {
+  host: process.env.MAIL_HOST || 'smtp.gmail.com',
+  port: Number(process.env.MAIL_PORT) || 587,
+  user: process.env.MAIL_USER || '(not set)',
+  from: process.env.MAIL_FROM || '(not set)',
+});
+
 export const verifyMailer = async (): Promise<void> => {
   try {
     await transporter.verify();
