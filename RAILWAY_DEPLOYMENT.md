@@ -68,6 +68,8 @@ Local file-based fallback is still supported:
 - `FIREBASE_SERVICE_ACCOUNT_PATH=...`
 - `GOOGLE_APPLICATION_CREDENTIALS=...`
 
+On Railway, do not set `FIREBASE_SERVICE_ACCOUNT_PATH` or `GOOGLE_APPLICATION_CREDENTIALS` unless that JSON file actually exists inside the deployed container. Remove stale local paths such as `/app/...firebase-adminsdk....json`; use `FIREBASE_SERVICE_ACCOUNT_JSON` or `FIREBASE_SERVICE_ACCOUNT_BASE64` instead.
+
 If Firebase is not configured, the app will still boot, but push notifications will be disabled.
 
 ## 4. Per-Service Variables
