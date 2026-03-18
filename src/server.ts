@@ -8,12 +8,10 @@ import { initSocket } from './socket/index.js';
 import { startFuelPriceCron } from './jobs/fuel-price.cron.js';
 
 const PORT = process.env.PORT || 3000;
-(async () => {
-  await verifyMailer();
-})();
 
 const startServer = async () => {
   try {
+    await verifyMailer();
     await verifyDatabaseConnection();
 
     const server = http.createServer(app);

@@ -1,9 +1,13 @@
 import { Worker } from 'bullmq';
-import transporter from '../../config/mailer.js';
+import transporter, { verifyMailer } from '../../config/mailer.js';
 import { bullRedis } from '../../queue/redisConnection.js';
 import { SendMailPayload } from './mail.types.js';
 
 console.log('📨 Mail worker booting...');
+
+(async () => {
+  await verifyMailer();
+})();
 
 bullRedis.ping();
 console.log('🟢 Redis connected');

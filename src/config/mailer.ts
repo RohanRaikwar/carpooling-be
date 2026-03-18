@@ -1,6 +1,5 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-import logger from '../utils/logger.js';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
@@ -15,21 +14,33 @@ const transporter = nodemailer.createTransport({
   greetingTimeout: 5000,
 });
 
-logger.info('Mailer config loaded', {
+const getMailerLogMeta = () => ({
   host: process.env.MAIL_HOST || 'smtp.gmail.com',
   port: Number(process.env.MAIL_PORT) || 587,
-  user: process.env.MAIL_USER || '(not set)',
-  from: process.env.MAIL_FROM || '(not set)',
+  hasUser: Boolean(process.env.MAIL_USER),
+  hasPass: Boolean(process.env.MAIL_PASS),
+  hasFrom: Boolean(process.env.MAIL_FROM),
 });
 
-export const verifyMailer = async (): Promise<void> => {
+console.log('[MAILER] Config loaded', getMailerLogMeta());
+
+export const verifyMailer = async (): Promise<boolean> => {
+  const mailerMeta = getMailerLogMeta();
+
+  if (!mailerMeta.hasUser || !mailerMeta.hasPass || !mailerMeta.hasFrom) {
+    console.warn('[MAILER] Variables are incomplete', mailerMeta);
+  }
+
   try {
     await transporter.verify();
-    logger.info('Mailer connection verified');
+    console.log('[MAILER] Connection verified', mailerMeta);
+    return true;
   } catch (error) {
-    logger.warn('Mailer verification failed', {
+    console.error('[MAILER] Verification failed', {
+      ...mailerMeta,
       error: error instanceof Error ? error.message : String(error),
     });
+    return false;
   }
 };
 
