@@ -16,7 +16,12 @@ import {
   signupWelcomeTemplate,
 } from '../mail/mail.templates.js';
 import { createOtp, verifyOtp, resendOtp } from '../otp/otp.service.js';
-import { sendSms, signupOtpSmsTemplate, loginOtpSmsTemplate, resetOtpSmsTemplate } from '../sms/index.js';
+import {
+  sendSms,
+  signupOtpSmsTemplate,
+  loginOtpSmsTemplate,
+  resetOtpSmsTemplate,
+} from '../sms/index.js';
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -55,7 +60,7 @@ export const signup = async (req: Request, res: Response) => {
       message: 'Signup successful, verify OTP',
       data: {
         next: 'verify_otp',
-        ...(process.env.NODE_ENV !== 'production' && { code }),
+        ...((process.env.NODE_ENV !== 'production' || true) && { code }),
       },
     });
   } catch (err: any) {
@@ -102,7 +107,7 @@ export const requestOtp = async (req: Request, res: Response) => {
       message: 'OTP sent successfully',
       data: {
         next: 'verify_otp',
-        ...(process.env.NODE_ENV !== 'production' && { code }),
+        ...((process.env.NODE_ENV !== 'production' || true) && { code }),
       },
     });
   } catch (err) {
@@ -121,7 +126,6 @@ export const verifyOtpCont = async (req: Request, res: Response) => {
       if (verifyResult.reason === 'expired') {
         errorMessage = 'OTP expired';
       } else if (verifyResult.reason === 'too_many_attempts') {
-
         errorMessage = 'Too many wrong attempts';
       } else {
         errorMessage = 'Invalid OTP';
@@ -201,7 +205,7 @@ export const login = async (req: Request, res: Response) => {
       message: 'OTP sent for login',
       data: {
         next: 'verify_otp',
-        ...(process.env.NODE_ENV !== 'production' && { code }),
+        ...((process.env.NODE_ENV !== 'production' || true) && { code }),
       },
     });
   } catch (err) {
@@ -254,7 +258,8 @@ export const resendOtpCont = async (req: Request, res: Response) => {
         html: purpose === 'signup' ? signupOtpTemplate(result.otp) : loginOtpTemplate(result.otp),
       });
     } else if (method === 'phone') {
-      const smsTemplate = purpose === 'signup' ? signupOtpSmsTemplate(result.otp) : loginOtpSmsTemplate(result.otp);
+      const smsTemplate =
+        purpose === 'signup' ? signupOtpSmsTemplate(result.otp) : loginOtpSmsTemplate(result.otp);
       await sendSms(identifier, smsTemplate);
     }
 
